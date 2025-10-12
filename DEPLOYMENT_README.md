@@ -1,4 +1,5 @@
-# 📦 Radiance CRM - Complete Deployment Package
+sudo systemctl restart nginx
+sudo systemctl restart php8.1-fpm# 📦 Radiance CRM - Complete Deployment Package
 
 ## What's Included
 
