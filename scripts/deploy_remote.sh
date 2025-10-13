@@ -27,6 +27,11 @@ if [ -f ${DEPLOY_PATH}/shared/.env ]; then
   ln -sf ${DEPLOY_PATH}/shared/.env ${RELEASE_DIR}/.env
 fi
 
+# Symlink Google Drive credentials from shared if exists
+if [ -f ${DEPLOY_PATH}/shared/google-drive-credentials.json ]; then
+  ln -sf ${DEPLOY_PATH}/shared/google-drive-credentials.json ${RELEASE_DIR}/storage/app/google-drive-credentials.json
+fi
+
 # Set permissions for bootstrap/cache
 chmod -R 775 bootstrap/cache || true
 
