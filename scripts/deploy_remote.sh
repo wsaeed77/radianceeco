@@ -11,6 +11,7 @@ RELEASE_DIR=${DEPLOY_PATH}/releases/${RELEASE}
 mkdir -p ${DEPLOY_PATH}/shared/storage/app/public
 mkdir -p ${DEPLOY_PATH}/shared/storage/framework/{cache,sessions,views}
 mkdir -p ${DEPLOY_PATH}/shared/storage/logs
+mkdir -p ${DEPLOY_PATH}/shared/storage/ofgem_files
 
 # Symlink Google Drive credentials into shared storage if exists (only if not already there)
 if [ -f ${DEPLOY_PATH}/shared/google-drive-credentials.json ]; then
