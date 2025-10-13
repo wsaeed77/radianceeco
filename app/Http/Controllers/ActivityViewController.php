@@ -25,7 +25,24 @@ class ActivityViewController extends Controller
      */
     public function index()
     {
-        $activities = Activity::with('lead', 'user')->latest()->paginate(20);
+        // Get all activities with user relationship, ordered by newest first
+        $activities = Activity::with('user')
+            ->latest()
+            ->get()
+            ->map(function ($activity) {
+                return [
+                    'id' => $activity->id,
+                    'type' => $activity->type->value,
+                    'description' => $activity->description,
+                    'message' => $activity->message ?? null,
+                    'lead_id' => $activity->lead_id,
+                    'user' => $activity->user ? [
+                        'id' => $activity->user->id,
+                        'name' => $activity->user->name,
+                    ] : null,
+                    'created_at' => $activity->created_at->toISOString(),
+                ];
+            });
         
         return Inertia::render('Activities/Index', [
             'activities' => $activities,

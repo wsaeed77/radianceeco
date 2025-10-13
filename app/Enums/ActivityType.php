@@ -17,6 +17,10 @@ enum ActivityType: string
     case DATA_MATCH_SENT = 'data_match_sent';
     case PRE_APPROVAL_SENT = 'pre_approval_sent';
     case SUBMITTED = 'submitted';
+    case LEAD_CREATED = 'lead_created';
+    case LEAD_DELETED = 'lead_deleted';
+    case USER_CREATED = 'user_created';
+    case USER_DELETED = 'user_deleted';
 
     /**
      * Get user-selectable activity types (exclude automatic types)
@@ -46,6 +50,10 @@ enum ActivityType: string
             self::STATUS_CHANGE,
             self::STAGE_CHANGE,
             self::FILE_UPLOAD,
+            self::LEAD_CREATED,
+            self::LEAD_DELETED,
+            self::USER_CREATED,
+            self::USER_DELETED,
         ]);
     }
 
@@ -68,6 +76,10 @@ enum ActivityType: string
             self::DATA_MATCH_SENT => 'Data Match Sent',
             self::PRE_APPROVAL_SENT => 'Pre Approval Sent',
             self::SUBMITTED => 'Submitted',
+            self::LEAD_CREATED => 'Lead Created',
+            self::LEAD_DELETED => 'Lead Deleted',
+            self::USER_CREATED => 'User Created',
+            self::USER_DELETED => 'User Deleted',
         };
     }
 }

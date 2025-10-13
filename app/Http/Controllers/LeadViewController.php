@@ -171,6 +171,14 @@ class LeadViewController extends Controller
             // Additional Information
             'epr_report' => 'nullable|string|max:50',
             
+            // EPR Fields
+            'epr_measures' => 'nullable|array',
+            'epr_pre_rating' => 'nullable|string|max:50',
+            'epr_post_rating' => 'nullable|string|max:50',
+            'epr_abs' => 'nullable|numeric',
+            'epr_amount_funded' => 'nullable|numeric',
+            'epr_payments' => 'nullable|array',
+            
             // Data Match Fields
             'benefit_holder_name' => 'nullable|string|max:255',
             'benefit_holder_dob' => 'nullable|date',
@@ -196,8 +204,24 @@ class LeadViewController extends Controller
             $validated['multi_phone_numbers'] = $phoneData;
         }
         
+        // Set default values for new leads
+        if (empty($validated['status'])) {
+            $validated['status'] = LeadStatus::NEW;
+        }
+        if (empty($validated['stage'])) {
+            $validated['stage'] = LeadStage::RADIANCE_TEAM;
+        }
+        
         // Create the lead
         $lead = Lead::create($validated);
+        
+        // Log lead creation
+        Activity::create([
+            'lead_id' => $lead->id,
+            'user_id' => Auth::id(),
+            'type' => ActivityType::LEAD_CREATED->value,
+            'description' => 'Lead created by ' . Auth::user()->name,
+        ]);
         
         // Create an activity log
         Activity::create([
@@ -290,6 +314,14 @@ class LeadViewController extends Controller
             // Additional Information
             'epr_report' => 'nullable|string|max:50',
             
+            // EPR Fields
+            'epr_measures' => 'nullable|array',
+            'epr_pre_rating' => 'nullable|string|max:50',
+            'epr_post_rating' => 'nullable|string|max:50',
+            'epr_abs' => 'nullable|numeric',
+            'epr_amount_funded' => 'nullable|numeric',
+            'epr_payments' => 'nullable|array',
+            
             // Data Match Fields
             'benefit_holder_name' => 'nullable|string|max:255',
             'benefit_holder_dob' => 'nullable|date',
@@ -376,13 +408,21 @@ class LeadViewController extends Controller
         
         $lead = Lead::findOrFail($id);
         
+        // Log lead deletion before deleting (keep activity with lead_id for audit trail)
+        $leadName = trim("{$lead->first_name} {$lead->last_name}") ?: $lead->email ?: 'Unknown';
+        Activity::create([
+            'lead_id' => $lead->id,
+            'user_id' => Auth::id(),
+            'type' => ActivityType::LEAD_DELETED->value,
+            'description' => "Lead '{$leadName}' deleted by " . Auth::user()->name,
+        ]);
+        
         // Delete associated records
-        $lead->activities()->delete();
         $lead->stageHistories()->delete();
         $lead->documents()->delete();
         $lead->eco4Calculations()->delete();
         
-        // Delete the lead
+        // Delete the lead (activities will have null lead_id but remain as audit trail)
         $lead->delete();
         
         return redirect()->route('leads.index')

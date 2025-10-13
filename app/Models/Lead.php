@@ -90,6 +90,14 @@ class Lead extends Model
         'epc_fetched_at',
         'epc_recommendations',
         'epc_recommendations_fetched_at',
+        
+        // EPR fields
+        'epr_measures',
+        'epr_pre_rating',
+        'epr_post_rating',
+        'epr_abs',
+        'epr_amount_funded',
+        'epr_payments',
     ];
 
     /**
@@ -109,6 +117,8 @@ class Lead extends Model
         'epc_fetched_at' => 'datetime',
         'epc_recommendations' => 'array',
         'epc_recommendations_fetched_at' => 'datetime',
+        'epr_measures' => 'array',
+        'epr_payments' => 'array',
     ];
 
     /**

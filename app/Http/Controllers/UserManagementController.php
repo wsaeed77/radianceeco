@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Enums\Role;
+use App\Enums\ActivityType;
 use App\Models\User;
+use App\Models\Activity;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -111,6 +113,14 @@ class UserManagementController extends Controller
             $user->givePermissionTo($validated['permissions']);
         }
 
+        // Log user creation
+        Activity::create([
+            'lead_id' => null,
+            'user_id' => Auth::id(),
+            'type' => ActivityType::USER_CREATED->value,
+            'description' => "User '{$user->name}' (ID: {$user->id}) created by " . Auth::user()->name,
+        ]);
+
         return redirect()->route('users.index')
             ->with('success', 'User created successfully!');
     }
@@ -209,6 +219,14 @@ class UserManagementController extends Controller
         if ($user->id === Auth::id()) {
             return back()->with('error', 'You cannot delete your own account!');
         }
+
+        // Log user deletion before deleting (lead_id is null for system-wide logs)
+        Activity::create([
+            'lead_id' => null,
+            'user_id' => Auth::id(),
+            'type' => ActivityType::USER_DELETED->value,
+            'description' => "User '{$user->name}' (ID: {$user->id}) deleted by " . Auth::user()->name,
+        ]);
 
         $user->delete();
 

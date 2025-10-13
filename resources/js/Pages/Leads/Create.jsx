@@ -19,8 +19,8 @@ export default function CreateLead({ sources, stages, statuses, agents }) {
         city: '',
         assigned_to: '',
         zip_code: '',
-        status: '',
-        stage: '',
+        status: 'new',
+        stage: 'radiance_team',
         source: '',
         source_details: '',
         grant_type: '',
@@ -46,9 +46,17 @@ export default function CreateLead({ sources, stages, statuses, agents }) {
         epc_details: '',
         // Additional Information
         epr_report: '',
+        // EPR Fields
+        epr_measures: [],
+        epr_pre_rating: '',
+        epr_post_rating: '',
+        epr_abs: '',
+        epr_amount_funded: '',
+        epr_payments: [],
     });
 
     const [phoneFields, setPhoneFields] = useState([{ label: '', number: '' }]);
+    const [eprPayments, setEprPayments] = useState([]);
 
     const addPhoneField = () => {
         setPhoneFields([...phoneFields, { label: '', number: '' }]);
@@ -73,6 +81,44 @@ export default function CreateLead({ sources, stages, statuses, agents }) {
             multi_phone_labels: newPhones.map(p => p.label),
             multi_phone_numbers: newPhones.map(p => p.number),
         });
+    };
+
+    // EPR Payment handlers
+    const addEprPayment = () => {
+        const newPayment = { type: '', amount: '', quantity: '', rate: '', percentage: '' };
+        setEprPayments([...eprPayments, newPayment]);
+        setData('epr_payments', [...eprPayments, newPayment]);
+    };
+
+    const removeEprPayment = (index) => {
+        const newPayments = eprPayments.filter((_, i) => i !== index);
+        setEprPayments(newPayments);
+        setData('epr_payments', newPayments);
+    };
+
+    const updateEprPayment = (index, field, value) => {
+        const newPayments = [...eprPayments];
+        newPayments[index][field] = value;
+        
+        // Calculate total for TRV/TTZC
+        if (newPayments[index].type === 'TRV/TTZC') {
+            const qty = parseFloat(newPayments[index].quantity) || 0;
+            const rate = parseFloat(newPayments[index].rate) || 0;
+            newPayments[index].amount = (qty * rate).toFixed(2);
+        }
+        
+        // Calculate VAT based on percentage of other expenses
+        if (newPayments[index].type === 'VAT') {
+            const percentage = parseFloat(newPayments[index].percentage) || 0;
+            // Calculate total of all non-VAT expenses
+            const otherExpenses = newPayments
+                .filter((p, i) => i !== index && p.type !== 'VAT')
+                .reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+            newPayments[index].amount = ((otherExpenses * percentage) / 100).toFixed(2);
+        }
+        
+        setEprPayments(newPayments);
+        setData('epr_payments', newPayments);
     };
 
     const submit = (e) => {
@@ -488,24 +534,252 @@ export default function CreateLead({ sources, stages, statuses, agents }) {
                         </CardContent>
                     </Card>
 
-                    {/* Additional Information */}
+                    {/* EPR Section */}
                     <Card padding={false} className="mb-6">
-                        <CardHeader className="bg-orange-600">
-                            <h3 className="text-lg font-semibold text-white">Additional Information</h3>
+                        <CardHeader className="bg-indigo-600">
+                            <h3 className="text-lg font-semibold text-white">PR (Energy Performance Report) and Submission</h3>
                         </CardHeader>
                         <CardContent className="p-6">
                             <div className="space-y-4">
-                                <FormSelect
-                                    label="EPR Report"
-                                    value={data.epr_report}
-                                    onChange={(e) => setData('epr_report', e.target.value)}
-                                    error={errors.epr_report}
-                                >
-                                    <option value="">Select Status</option>
-                                    <option value="Completed">Completed</option>
-                                    <option value="Under Process">Under Process</option>
-                                    <option value="Pending">Pending</option>
-                                </FormSelect>
+                                {/* Measures */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Measures
+                                    </label>
+                                    <div className="space-y-2">
+                                        {['Loft Insulation', 'Smart Thermostat', 'TRV', 'Programmer and Room Thermostat'].map((measure) => (
+                                            <label key={measure} className="flex items-center">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={data.epr_measures?.includes(measure)}
+                                                    onChange={(e) => {
+                                                        const measures = data.epr_measures || [];
+                                                        if (e.target.checked) {
+                                                            setData('epr_measures', [...measures, measure]);
+                                                        } else {
+                                                            setData('epr_measures', measures.filter(m => m !== measure));
+                                                        }
+                                                    }}
+                                                    className="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                                                />
+                                                <span className="ml-2 text-sm text-gray-700">{measure}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* EPR Report Status */}
+                                <div>
+                                    <FormSelect
+                                        label="EPR Report Status"
+                                        value={data.epr_report}
+                                        onChange={(e) => setData('epr_report', e.target.value)}
+                                        error={errors.epr_report}
+                                    >
+                                        <option value="">Select Status</option>
+                                        <option value="Completed">Completed</option>
+                                        <option value="Under Process">Under Process</option>
+                                        <option value="Pending">Pending</option>
+                                    </FormSelect>
+                                </div>
+
+                                {/* Pre and Post Rating */}
+                                <div className="grid grid-cols-2 gap-4">
+                                    <FormSelect
+                                        label="Pre Rating (Before)"
+                                        value={data.epr_pre_rating}
+                                        onChange={(e) => setData('epr_pre_rating', e.target.value)}
+                                        error={errors.epr_pre_rating}
+                                    >
+                                        <option value="">Select Pre Rating</option>
+                                        <option value="21 (Low E)">21 (Low E)</option>
+                                        <option value="39 (High E)">39 (High E)</option>
+                                        <option value="55 (Low D)">55 (Low D)</option>
+                                        <option value="68 (High D)">68 (High D)</option>
+                                        <option value="69 (Low C)">69 (Low C)</option>
+                                        <option value="80 (High C)">80 (High C)</option>
+                                        <option value="81 (B)">81 (B)</option>
+                                        <option value="92 (A)">92 (A)</option>
+                                    </FormSelect>
+                                    <FormSelect
+                                        label="Post Rating (After)"
+                                        value={data.epr_post_rating}
+                                        onChange={(e) => setData('epr_post_rating', e.target.value)}
+                                        error={errors.epr_post_rating}
+                                    >
+                                        <option value="">Select Post Rating</option>
+                                        <option value="21 (Low E)">21 (Low E)</option>
+                                        <option value="39 (High E)">39 (High E)</option>
+                                        <option value="55 (Low D)">55 (Low D)</option>
+                                        <option value="68 (High D)">68 (High D)</option>
+                                        <option value="69 (Low C)">69 (Low C)</option>
+                                        <option value="80 (High C)">80 (High C)</option>
+                                        <option value="81 (B)">81 (B)</option>
+                                        <option value="92 (A)">92 (A)</option>
+                                    </FormSelect>
+                                </div>
+
+                                {/* ABS and Amount Funded */}
+                                <div className="grid grid-cols-2 gap-4">
+                                    <FormInput
+                                        label="ABS"
+                                        type="number"
+                                        step="0.01"
+                                        value={data.epr_abs}
+                                        onChange={(e) => setData('epr_abs', e.target.value)}
+                                        error={errors.epr_abs}
+                                        placeholder="0.00"
+                                    />
+                                    <FormInput
+                                        label="Amount Funded"
+                                        type="number"
+                                        step="0.01"
+                                        value={data.epr_amount_funded}
+                                        onChange={(e) => setData('epr_amount_funded', e.target.value)}
+                                        error={errors.epr_amount_funded}
+                                        placeholder="0.00"
+                                    />
+                                </div>
+
+                                {/* Expenses */}
+                                <div className="mt-6">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <h4 className="text-sm font-semibold text-gray-900">Expenses</h4>
+                                        <Button type="button" variant="secondary" size="sm" onClick={addEprPayment}>
+                                            Add Expense
+                                        </Button>
+                                    </div>
+
+                                    {eprPayments.length > 0 ? (
+                                        <div className="space-y-4">
+                                            {eprPayments.map((payment, index) => (
+                                                <div key={index} className="p-4 border border-gray-200 rounded-lg bg-gray-50">
+                                                    <div className="grid grid-cols-12 gap-3">
+                                                        <div className="col-span-11">
+                                                            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                                                                <FormSelect
+                                                                    label="Payment Type"
+                                                                    value={payment.type}
+                                                                    onChange={(e) => updateEprPayment(index, 'type', e.target.value)}
+                                                                >
+                                                                    <option value="">Select Type</option>
+                                                                    <option value="Early Fee">Early Fee</option>
+                                                                    <option value="C3">C3</option>
+                                                                    <option value="Gas Engineer">Gas Engineer</option>
+                                                                    <option value="Remedial">Remedial</option>
+                                                                    <option value="Loft Material">Loft Material</option>
+                                                                    <option value="Loft Labour">Loft Labour</option>
+                                                                    <option value="Extractor Fan">Extractor Fan</option>
+                                                                    <option value="Trickle Vents">Trickle Vents</option>
+                                                                    <option value="Boiler Material">Boiler Material</option>
+                                                                    <option value="ESI">ESI</option>
+                                                                    <option value="Secondary Heating">Secondary Heating</option>
+                                                                    <option value="Data Match">Data Match</option>
+                                                                    <option value="Coordination">Coordination</option>
+                                                                    <option value="GDGC">GDGC</option>
+                                                                    <option value="Land Registry">Land Registry</option>
+                                                                    <option value="Administrative Charges">Administrative Charges</option>
+                                                                    <option value="Surveyor">Surveyor</option>
+                                                                    <option value="Misc">Misc</option>
+                                                                    <option value="TRV/TTZC">TRV/TTZC</option>
+                                                                    <option value="VAT">VAT</option>
+                                                                </FormSelect>
+
+                                                                {payment.type === 'VAT' ? (
+                                                                    <>
+                                                                        <FormInput
+                                                                            label="Percentage (%)"
+                                                                            type="number"
+                                                                            step="0.01"
+                                                                            value={payment.percentage}
+                                                                            onChange={(e) => updateEprPayment(index, 'percentage', e.target.value)}
+                                                                            placeholder="20"
+                                                                        />
+                                                                        <div className="col-span-2">
+                                                                            <FormInput
+                                                                                label="VAT Amount"
+                                                                                type="number"
+                                                                                value={payment.amount}
+                                                                                disabled
+                                                                                className="bg-gray-100"
+                                                                            />
+                                                                        </div>
+                                                                    </>
+                                                                ) : payment.type === 'TRV/TTZC' ? (
+                                                                    <>
+                                                                        <FormInput
+                                                                            label="Quantity"
+                                                                            type="number"
+                                                                            value={payment.quantity}
+                                                                            onChange={(e) => updateEprPayment(index, 'quantity', e.target.value)}
+                                                                            placeholder="0"
+                                                                        />
+                                                                        <FormInput
+                                                                            label="Rate"
+                                                                            type="number"
+                                                                            step="0.01"
+                                                                            value={payment.rate}
+                                                                            onChange={(e) => updateEprPayment(index, 'rate', e.target.value)}
+                                                                            placeholder="0.00"
+                                                                        />
+                                                                        <FormInput
+                                                                            label="Total"
+                                                                            type="number"
+                                                                            value={payment.amount}
+                                                                            disabled
+                                                                            className="bg-gray-100"
+                                                                        />
+                                                                    </>
+                                                                ) : (
+                                                                    <div className="col-span-3">
+                                                                        <FormInput
+                                                                            label="Amount"
+                                                                            type="number"
+                                                                            step="0.01"
+                                                                            value={payment.amount}
+                                                                            onChange={(e) => updateEprPayment(index, 'amount', e.target.value)}
+                                                                            placeholder="0.00"
+                                                                        />
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                        <div className="col-span-1 flex items-end">
+                                                            <Button
+                                                                type="button"
+                                                                variant="danger"
+                                                                size="sm"
+                                                                onClick={() => removeEprPayment(index)}
+                                                            >
+                                                                ×
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <p className="text-sm text-gray-500 italic">No expenses added yet.</p>
+                                    )}
+                                </div>
+
+                                {/* Net Profit Calculation */}
+                                {(data.epr_amount_funded || eprPayments.length > 0) && (
+                                    <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                                        <div className="flex justify-between items-center">
+                                            <h4 className="text-sm font-semibold text-gray-900">Net Profit:</h4>
+                                            <p className="text-lg font-bold text-green-600">
+                                                £{(
+                                                    (parseFloat(data.epr_amount_funded) || 0) - 
+                                                    eprPayments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0)
+                                                ).toFixed(2)}
+                                            </p>
+                                        </div>
+                                        <p className="text-xs text-gray-500 mt-1">
+                                            Amount Funded (£{parseFloat(data.epr_amount_funded || 0).toFixed(2)}) - Total Expenses (£{eprPayments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0).toFixed(2)})
+                                        </p>
+                                    </div>
+                                )}
                             </div>
                         </CardContent>
                     </Card>

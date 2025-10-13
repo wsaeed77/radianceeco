@@ -764,6 +764,133 @@ export default function ShowLead({ lead, activityTypes, documentKinds, epc_certi
             {/* ECO4/GBIS Calculator */}
             <Eco4CalculatorCard lead={lead} />
 
+            {/* EPR Section */}
+            <Card padding={false} className="mb-6">
+                <CardHeader className="bg-indigo-600">
+                    <div className="flex items-center justify-between">
+                        <CardTitle className="text-white">PR (Energy Performance Report) and Submission</CardTitle>
+                        <Link href={route('leads.edit', lead.id)}>
+                            <Button variant="secondary" size="sm">
+                                <PencilIcon className="-ml-1 mr-2 h-4 w-4" />
+                                Edit
+                            </Button>
+                        </Link>
+                    </div>
+                </CardHeader>
+                <CardContent className="p-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Measures */}
+                        <div className="col-span-2">
+                            <h4 className="text-sm font-semibold text-gray-700 mb-2">Measures</h4>
+                            {lead.epr_measures && lead.epr_measures.length > 0 ? (
+                                <div className="flex flex-wrap gap-2">
+                                    {lead.epr_measures.map((measure, index) => (
+                                        <span key={index} className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-indigo-100 text-indigo-800">
+                                            {measure}
+                                        </span>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-sm text-gray-500 italic">No measures selected</p>
+                            )}
+                        </div>
+
+                        {/* Floor Area */}
+                        <div>
+                            <h4 className="text-sm font-semibold text-gray-700 mb-1">Floor Area (m²)</h4>
+                            <p className="text-gray-900">{lead.floor_area || 'Not specified'}</p>
+                        </div>
+
+                        {/* Pre Rating */}
+                        <div>
+                            <h4 className="text-sm font-semibold text-gray-700 mb-1">Pre Rating (Before)</h4>
+                            <p className="text-gray-900">{lead.epr_pre_rating || 'Not specified'}</p>
+                        </div>
+
+                        {/* Post Rating */}
+                        <div>
+                            <h4 className="text-sm font-semibold text-gray-700 mb-1">Post Rating (After)</h4>
+                            <p className="text-gray-900">{lead.epr_post_rating || 'Not specified'}</p>
+                        </div>
+
+                        {/* ABS */}
+                        <div>
+                            <h4 className="text-sm font-semibold text-gray-700 mb-1">ABS</h4>
+                            <p className="text-gray-900">{lead.epr_abs ? `£${parseFloat(lead.epr_abs).toFixed(2)}` : 'Not specified'}</p>
+                        </div>
+
+                        {/* Amount Funded */}
+                        <div>
+                            <h4 className="text-sm font-semibold text-gray-700 mb-1">Amount Funded</h4>
+                            <p className="text-gray-900">{lead.epr_amount_funded ? `£${parseFloat(lead.epr_amount_funded).toFixed(2)}` : 'Not specified'}</p>
+                        </div>
+
+                        {/* Expenses */}
+                        <div className="col-span-2">
+                            <h4 className="text-sm font-semibold text-gray-700 mb-3">Expenses</h4>
+                            {lead.epr_payments && lead.epr_payments.length > 0 ? (
+                                <div className="overflow-x-auto">
+                                    <table className="min-w-full divide-y divide-gray-200">
+                                        <thead className="bg-gray-50">
+                                            <tr>
+                                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
+                                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rate</th>
+                                                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="bg-white divide-y divide-gray-200">
+                                            {lead.epr_payments.map((payment, index) => (
+                                                <tr key={index} className="hover:bg-gray-50">
+                                                    <td className="px-4 py-3 text-sm text-gray-900">{payment.type}</td>
+                                                    <td className="px-4 py-3 text-sm text-gray-900">
+                                                        {payment.type === 'TRV/TTZC' ? payment.quantity : payment.type === 'VAT' ? '-' : '-'}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-sm text-gray-900">
+                                                        {payment.type === 'TRV/TTZC' ? `£${parseFloat(payment.rate).toFixed(2)}` : payment.type === 'VAT' ? `${payment.percentage}%` : '-'}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-sm text-gray-900 text-right font-semibold">
+                                                        £{parseFloat(payment.amount || 0).toFixed(2)}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                            <tr className="bg-gray-100 font-bold">
+                                                <td colSpan="3" className="px-4 py-3 text-sm text-gray-900 text-right">Total Expenses:</td>
+                                                <td className="px-4 py-3 text-sm text-gray-900 text-right">
+                                                    £{lead.epr_payments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0).toFixed(2)}
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            ) : (
+                                <p className="text-sm text-gray-500 italic">No expenses added</p>
+                            )}
+                        </div>
+
+                        {/* Net Profit */}
+                        {(lead.epr_amount_funded || (lead.epr_payments && lead.epr_payments.length > 0)) && (
+                            <div className="col-span-2">
+                                <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                                    <div className="flex justify-between items-center">
+                                        <h4 className="text-sm font-semibold text-gray-900">Net Profit:</h4>
+                                        <p className="text-lg font-bold text-green-600">
+                                            £{(
+                                                (parseFloat(lead.epr_amount_funded) || 0) - 
+                                                (lead.epr_payments ? lead.epr_payments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0) : 0)
+                                            ).toFixed(2)}
+                                        </p>
+                                    </div>
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        Amount Funded (£{parseFloat(lead.epr_amount_funded || 0).toFixed(2)}) - Total Expenses (£{lead.epr_payments ? lead.epr_payments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0).toFixed(2) : '0.00'})
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </CardContent>
+            </Card>
+
             {/* Activity Thread */}
             <Card padding={false} className="mb-6">
                 <CardHeader className="bg-success-600">
@@ -780,10 +907,10 @@ export default function ShowLead({ lead, activityTypes, documentKinds, epc_certi
                     </div>
                 </CardHeader>
                 <CardContent className="p-6">
-                    {lead.activities && lead.activities.length > 0 ? (
+                    {lead.activities && lead.activities.filter(a => a.type !== 'file_upload').length > 0 ? (
                         <>
                             <div className="space-y-6">
-                                {[...lead.activities].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).map((activity) => (
+                                {[...lead.activities].filter(a => a.type !== 'file_upload').sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).map((activity) => (
                                     <div key={activity.id} className="flex gap-4 pb-6 border-b border-gray-200 last:border-0 last:pb-0">
                                         <div className="flex-shrink-0">
                                             <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white ${
@@ -814,25 +941,54 @@ export default function ShowLead({ lead, activityTypes, documentKinds, epc_certi
                                                 {activity.documents && activity.documents.length > 0 && (
                                                     <div className="mt-3 pt-3 border-t border-gray-200">
                                                         <p className="text-xs font-semibold text-gray-700 mb-2">Attached Documents:</p>
-                                                        <ul className="space-y-1">
-                                                            {activity.documents.map((document) => (
-                                                                <li key={document.id} className="text-sm text-gray-600 flex items-center">
-                                                                    <svg className="h-4 w-4 mr-1 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                                                                        <path d="M8 2a1 1 0 000 2h2a1 1 0 100-2H8z" />
-                                                                        <path d="M3 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v6h-4.586l1.293-1.293a1 1 0 00-1.414-1.414l-3 3a1 1 0 000 1.414l3 3a1 1 0 001.414-1.414L10.414 13H15v3a2 2 0 01-2 2H5a2 2 0 01-2-2V5z" />
-                                                                    </svg>
-                                                                    <Link 
-                                                                        href={route('documents.download', document.id)}
-                                                                        className="text-primary-600 hover:text-primary-800 hover:underline"
-                                                                    >
-                                                                        {document.name}
-                                                                    </Link>
-                                                                    <span className="text-gray-500 ml-1">
-                                                                        ({(document.size_bytes / 1024).toFixed(2)} KB)
-                                                                    </span>
-                                                                </li>
-                                                            ))}
-                                                        </ul>
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                            {activity.documents.map((document) => {
+                                                                const isImage = document.name && (
+                                                                    document.name.toLowerCase().endsWith('.jpg') ||
+                                                                    document.name.toLowerCase().endsWith('.jpeg') ||
+                                                                    document.name.toLowerCase().endsWith('.png') ||
+                                                                    document.name.toLowerCase().endsWith('.gif') ||
+                                                                    document.name.toLowerCase().endsWith('.webp')
+                                                                );
+
+                                                                return (
+                                                                    <div key={document.id} className="flex items-start gap-2 p-2 border border-gray-200 rounded-lg hover:bg-gray-50">
+                                                                        {isImage && document.storage_path ? (
+                                                                            <a 
+                                                                                href={route('documents.download', document.id)}
+                                                                                target="_blank"
+                                                                                rel="noopener noreferrer"
+                                                                                className="flex-shrink-0"
+                                                                            >
+                                                                                <img 
+                                                                                    src={`/storage/${document.storage_path}`}
+                                                                                    alt={document.name}
+                                                                                    className="h-16 w-16 object-cover rounded border border-gray-300"
+                                                                                />
+                                                                            </a>
+                                                                        ) : (
+                                                                            <div className="flex-shrink-0 h-16 w-16 bg-gray-100 rounded flex items-center justify-center">
+                                                                                <svg className="h-8 w-8 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                                                                                    <path d="M8 2a1 1 0 000 2h2a1 1 0 100-2H8z" />
+                                                                                    <path d="M3 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v6h-4.586l1.293-1.293a1 1 0 00-1.414-1.414l-3 3a1 1 0 000 1.414l3 3a1 1 0 001.414-1.414L10.414 13H15v3a2 2 0 01-2 2H5a2 2 0 01-2-2V5z" />
+                                                                                </svg>
+                                                                            </div>
+                                                                        )}
+                                                                        <div className="flex-1 min-w-0">
+                                                                            <Link 
+                                                                                href={route('documents.download', document.id)}
+                                                                                className="text-sm font-medium text-primary-600 hover:text-primary-800 hover:underline block truncate"
+                                                                            >
+                                                                                {document.name}
+                                                                            </Link>
+                                                                            <p className="text-xs text-gray-500">
+                                                                                {(document.size_bytes / 1024).toFixed(2)} KB
+                                                                            </p>
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
                                                     </div>
                                                 )}
                                             </div>

@@ -4,6 +4,7 @@ namespace App\Enums;
 
 enum LeadStatus: string
 {
+    case NEW = 'new';
     case HOLD = 'hold';
     case NOT_POSSIBLE = 'not_possible';
     case NEED_TO_VISIT_PROPERTY = 'need_to_visit_property';
@@ -24,6 +25,7 @@ enum LeadStatus: string
     public function label(): string
     {
         return match($this) {
+            self::NEW => 'New',
             self::HOLD => 'Hold',
             self::NOT_POSSIBLE => 'Not Possible',
             self::NEED_TO_VISIT_PROPERTY => 'Need To Visit Property',
@@ -47,6 +49,7 @@ enum LeadStatus: string
         }
 
         return match (strtolower(trim($status))) {
+            'new' => self::NEW,
             'hold', 'on hold' => self::HOLD,
             'not possible', 'impossible', 'cannot proceed' => self::NOT_POSSIBLE,
             'need to visit property', 'need visit', 'visit required' => self::NEED_TO_VISIT_PROPERTY,

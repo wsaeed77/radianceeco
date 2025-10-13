@@ -24,7 +24,7 @@ export default function AppLayout({ children, header }) {
         { name: 'Leads', href: route('leads.index'), icon: UserGroupIcon },
         { name: 'Import', href: route('import.index'), icon: ArrowDownTrayIcon },
         { name: 'Users', href: route('users.index'), icon: UsersIcon },
-        { name: 'Activities', href: route('activities.index'), icon: DocumentTextIcon },
+        { name: 'Logs', href: route('activities.index'), icon: DocumentTextIcon },
         { name: 'Reports', href: route('reports.index'), icon: ChartBarIcon },
         { name: 'Settings', href: route('settings.index'), icon: Cog6ToothIcon },
     ];
