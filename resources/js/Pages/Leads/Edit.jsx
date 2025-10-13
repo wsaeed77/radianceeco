@@ -39,6 +39,7 @@ export default function EditLead({ lead, sources, stages, statuses, agents }) {
         possible_grant_types: lead.possible_grant_types || '',
         benefit_type: lead.benefit_type || '',
         council_tax_band: lead.council_tax_band || '',
+        floor_area: lead.floor_area || '',
         epc_rating: lead.epc_rating || '',
         gas_safe_info: lead.gas_safe_info || '',
         poa_info: lead.poa_info || '',
@@ -442,6 +443,16 @@ export default function EditLead({ lead, sources, stages, statuses, agents }) {
                                         <option value="E">Band E</option>
                                         <option value="F">Band F</option>
                                     </FormSelect>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <FormInput
+                                        label="Floor Area (m²)"
+                                        value={data.floor_area}
+                                        onChange={(e) => setData('floor_area', e.target.value)}
+                                        error={errors.floor_area}
+                                        placeholder="e.g., 85"
+                                    />
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4">

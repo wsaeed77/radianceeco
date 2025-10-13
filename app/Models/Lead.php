@@ -74,6 +74,7 @@ class Lead extends Model
         'epc_details',
         'gas_safe_info',
         'council_tax_band',
+        'floor_area',
         'eligibility_client_dob',
         
         // Lead Status and Source additional fields
