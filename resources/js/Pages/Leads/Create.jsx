@@ -44,6 +44,8 @@ export default function CreateLead({ sources, stages, statuses, agents }) {
         gas_safe_info: '',
         poa_info: '',
         epc_details: '',
+        // Additional Information
+        epr_report: '',
     });
 
     const [phoneFields, setPhoneFields] = useState([{ label: '', number: '' }]);
@@ -482,6 +484,28 @@ export default function CreateLead({ sources, stages, statuses, agents }) {
                                         rows={3}
                                     />
                                 </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Additional Information */}
+                    <Card padding={false} className="mb-6">
+                        <CardHeader className="bg-orange-600">
+                            <h3 className="text-lg font-semibold text-white">Additional Information</h3>
+                        </CardHeader>
+                        <CardContent className="p-6">
+                            <div className="space-y-4">
+                                <FormSelect
+                                    label="EPR Report"
+                                    value={data.epr_report}
+                                    onChange={(e) => setData('epr_report', e.target.value)}
+                                    error={errors.epr_report}
+                                >
+                                    <option value="">Select Status</option>
+                                    <option value="Completed">Completed</option>
+                                    <option value="Under Process">Under Process</option>
+                                    <option value="Pending">Pending</option>
+                                </FormSelect>
                             </div>
                         </CardContent>
                     </Card>

@@ -168,6 +168,9 @@ class LeadViewController extends Controller
             'council_tax_band' => 'nullable|string|max:10',
             'eligibility_client_dob' => 'nullable|date',
             
+            // Additional Information
+            'epr_report' => 'nullable|string|max:50',
+            
             // Data Match Fields
             'benefit_holder_name' => 'nullable|string|max:255',
             'benefit_holder_dob' => 'nullable|date',
@@ -283,6 +286,9 @@ class LeadViewController extends Controller
             'gas_safe_info' => 'nullable|string|max:255',
             'council_tax_band' => 'nullable|string|max:10',
             'eligibility_client_dob' => 'nullable|date',
+            
+            // Additional Information
+            'epr_report' => 'nullable|string|max:50',
             
             // Data Match Fields
             'benefit_holder_name' => 'nullable|string|max:255',
