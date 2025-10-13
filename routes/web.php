@@ -89,7 +89,7 @@ Route::prefix('eco4')->middleware('auth')->group(function () {
 
 // Settings routes (admin only)
 use App\Http\Controllers\SettingsController;
-Route::middleware(['auth', 'permission:setting.manage'])->group(function () {
+Route::middleware(['auth'])->group(function () {
     Route::get('/settings', [SettingsController::class, 'index'])->name('settings.index');
     Route::put('/settings/{setting}', [SettingsController::class, 'update'])->name('settings.update');
     Route::post('/settings/api/update', [SettingsController::class, 'apiUpdate'])->name('settings.api.update');
