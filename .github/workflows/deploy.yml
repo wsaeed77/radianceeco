@@ -8,7 +8,8 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     env:
-      SSH_HOST: ${{ secrets.SSH_HOST }}
+      SSH_USER: ${{ secrets.SSH_USER }}
+      SSH_HOSTNAME: ${{ secrets.SSH_HOSTNAME }}
       SSH_PORT: ${{ secrets.SSH_PORT || '22' }}
       SSH_KEY: ${{ secrets.SSH_KEY }}
       DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
@@ -39,20 +40,20 @@ jobs:
       - name: Prepare SSH
         run: |
           mkdir -p ~/.ssh
-          echo "$SSH_KEY" > ~/.ssh/id_rsa
+          printf "%s" "$SSH_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -p ${SSH_PORT} ${SSH_HOST#*@} >> ~/.ssh/known_hosts
+          ssh-keyscan -p ${SSH_PORT} -H ${SSH_HOSTNAME} >> ~/.ssh/known_hosts
 
       - name: Rsync release to server
         run: |
           RELEASE=${GITHUB_SHA}
           rsync -az --delete \
             --exclude ".git" --exclude "node_modules" --exclude ".github" \
-            -e "ssh -p ${SSH_PORT}" ./ ${SSH_HOST}:${DEPLOY_PATH}/releases/${RELEASE}/
+            -e "ssh -p ${SSH_PORT}" ./ ${SSH_USER}@${SSH_HOSTNAME}:${DEPLOY_PATH}/releases/${RELEASE}/
 
       - name: Run remote deploy script
         run: |
           RELEASE=${GITHUB_SHA}
-          ssh -p ${SSH_PORT} ${SSH_HOST} "bash ${DEPLOY_PATH}/releases/${RELEASE}/scripts/deploy_remote.sh ${DEPLOY_PATH} ${RELEASE}"
+          ssh -p ${SSH_PORT} ${SSH_USER}@${SSH_HOSTNAME} "bash ${DEPLOY_PATH}/releases/${RELEASE}/scripts/deploy_remote.sh ${DEPLOY_PATH} ${RELEASE}"
 
 
