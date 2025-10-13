@@ -36,6 +36,7 @@ Route::post('/leads', [LeadViewController::class, 'store'])->name('leads.store')
 Route::get('/leads/{lead}', [LeadViewController::class, 'show'])->name('leads.show');
 Route::get('/leads/{lead}/edit', [LeadViewController::class, 'edit'])->name('leads.edit');
 Route::put('/leads/{lead}', [LeadViewController::class, 'update'])->name('leads.update');
+Route::delete('/leads/{lead}', [LeadViewController::class, 'destroy'])->name('leads.destroy');
 
 // Document routes
 use App\Http\Controllers\DocumentViewController;

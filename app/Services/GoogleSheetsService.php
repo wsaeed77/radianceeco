@@ -44,7 +44,9 @@ class GoogleSheetsService
                 'pageSize' => $pageSize,
                 'fields' => 'nextPageToken, files(id, name, modifiedTime, owners)',
                 'q' => "mimeType='application/vnd.google-apps.spreadsheet' and trashed=false",
-                'orderBy' => 'modifiedTime desc'
+                'orderBy' => 'modifiedTime desc',
+                'supportsAllDrives' => true,
+                'includeItemsFromAllDrives' => true,
             ];
 
             if ($pageToken) {

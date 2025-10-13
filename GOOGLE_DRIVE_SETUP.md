@@ -90,7 +90,7 @@ GOOGLE_DRIVE_ROOT_FOLDER_ID=your_folder_id_from_step_6
 **Example:**
 ```env
 GOOGLE_DRIVE_ENABLED=true
-GOOGLE_DRIVE_ROOT_FOLDER_ID=1a2b3c4d5e6f7g8h9i0j
+GOOGLE_DRIVE_ROOT_FOLDER_ID=106a5N8soaY8TYS-Pa-26nB6_cJWCnHNY
 ```
 
 **Note:** If you skip Step 6, leave `GOOGLE_DRIVE_ROOT_FOLDER_ID` empty, and files will be created in the service account's root drive.

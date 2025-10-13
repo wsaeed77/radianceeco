@@ -20,8 +20,35 @@ class GoogleDriveService
             $this->client = new Client();
             $this->client->setApplicationName(config('app.name'));
             $this->client->setScopes([Drive::DRIVE_FILE]);
-            $this->client->setAuthConfig(storage_path('app/google-drive-credentials.json'));
             $this->client->setAccessType('offline');
+            $this->client->setPrompt('consent');
+            
+            $authType = config('services.google_drive.auth_type', 'service_account');
+            
+            if ($authType === 'oauth') {
+                // OAuth authentication
+                $this->client->setAuthConfig(storage_path('app/google-oauth-credentials.json'));
+                
+                // Load previously authorized token
+                $tokenPath = storage_path('app/google-oauth-token.json');
+                if (file_exists($tokenPath)) {
+                    $accessToken = json_decode(file_get_contents($tokenPath), true);
+                    $this->client->setAccessToken($accessToken);
+                }
+                
+                // Refresh token if expired
+                if ($this->client->isAccessTokenExpired()) {
+                    if ($this->client->getRefreshToken()) {
+                        $this->client->fetchAccessTokenWithRefreshToken($this->client->getRefreshToken());
+                        file_put_contents($tokenPath, json_encode($this->client->getAccessToken()));
+                    } else {
+                        throw new Exception('OAuth token expired and no refresh token available. Run: php artisan google:authorize');
+                    }
+                }
+            } else {
+                // Service account authentication (legacy)
+                $this->client->setAuthConfig(storage_path('app/google-drive-credentials.json'));
+            }
             
             $this->service = new Drive($this->client);
             $this->rootFolderId = config('services.google_drive.root_folder_id');
@@ -48,7 +75,9 @@ class GoogleDriveService
             $results = $this->service->files->listFiles([
                 'q' => $query,
                 'fields' => 'files(id, name)',
-                'spaces' => 'drive'
+                'spaces' => 'drive',
+                'supportsAllDrives' => true,
+                'includeItemsFromAllDrives' => true,
             ]);
 
             if (count($results->getFiles()) > 0) {
@@ -66,7 +95,8 @@ class GoogleDriveService
             }
 
             $folder = $this->service->files->create($fileMetadata, [
-                'fields' => 'id'
+                'fields' => 'id',
+                'supportsAllDrives' => true,
             ]);
 
             return $folder->id;
@@ -90,7 +120,9 @@ class GoogleDriveService
             $results = $this->service->files->listFiles([
                 'q' => $query,
                 'fields' => 'files(id, name)',
-                'spaces' => 'drive'
+                'spaces' => 'drive',
+                'supportsAllDrives' => true,
+                'includeItemsFromAllDrives' => true,
             ]);
 
             if (count($results->getFiles()) > 0) {
@@ -105,7 +137,8 @@ class GoogleDriveService
             ]);
 
             $folder = $this->service->files->create($fileMetadata, [
-                'fields' => 'id'
+                'fields' => 'id',
+                'supportsAllDrives' => true,
             ]);
 
             return $folder->id;
@@ -125,6 +158,12 @@ class GoogleDriveService
                 throw new Exception("File not found: {$filePath}");
             }
 
+            // Get folder metadata to check if it's in a shared drive
+            $folder = $this->service->files->get($folderId, [
+                'fields' => 'id, name, driveId, capabilities',
+                'supportsAllDrives' => true,
+            ]);
+
             $fileMetadata = new DriveFile([
                 'name' => $fileName,
                 'parents' => [$folderId]
@@ -132,12 +171,20 @@ class GoogleDriveService
 
             $content = file_get_contents($filePath);
             
-            $file = $this->service->files->create($fileMetadata, [
+            $uploadParams = [
                 'data' => $content,
                 'mimeType' => $mimeType ?? mime_content_type($filePath),
                 'uploadType' => 'multipart',
-                'fields' => 'id, name, webViewLink, webContentLink'
-            ]);
+                'fields' => 'id, name, webViewLink, webContentLink',
+                'supportsAllDrives' => true,
+            ];
+
+            // If in a shared drive, specify it
+            if (isset($folder->driveId)) {
+                $uploadParams['driveId'] = $folder->driveId;
+            }
+
+            $file = $this->service->files->create($fileMetadata, $uploadParams);
 
             return [
                 'id' => $file->id,
@@ -147,6 +194,8 @@ class GoogleDriveService
             ];
         } catch (Exception $e) {
             Log::error('Failed to upload file to Google Drive: ' . $e->getMessage());
+            Log::error('File path: ' . $filePath);
+            Log::error('Folder ID: ' . $folderId);
             throw $e;
         }
     }
@@ -185,7 +234,22 @@ class GoogleDriveService
      */
     public function isConfigured()
     {
+        $authType = config('services.google_drive.auth_type', 'service_account');
+        
+        if ($authType === 'oauth') {
+            return file_exists(storage_path('app/google-oauth-credentials.json')) 
+                && file_exists(storage_path('app/google-oauth-token.json'));
+        }
+        
         return file_exists(storage_path('app/google-drive-credentials.json'));
+    }
+    
+    /**
+     * Get the Google Client instance
+     */
+    public function getClient()
+    {
+        return $this->client;
     }
 }
 

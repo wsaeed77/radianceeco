@@ -89,14 +89,24 @@ echo ""
 echo "✓ Credentials file installed:"
 ls -lh ${DEPLOY_PATH}/shared/google-drive-credentials.json
 
-# If current release exists, create symlink for immediate availability
-if [ -d "${DEPLOY_PATH}/current" ]; then
+# Create symlink in shared storage (so it's available via storage symlink)
+echo ""
+echo "Creating symlink in shared storage..."
+sudo mkdir -p ${DEPLOY_PATH}/shared/storage/app
+# Use relative path to avoid symlink issues
+cd ${DEPLOY_PATH}/shared/storage/app
+sudo ln -sf ../../google-drive-credentials.json google-drive-credentials.json
+echo "✓ Symlink created in shared storage"
+
+# If current release exists, verify it's accessible
+if [ -d "${DEPLOY_PATH}/current/storage/app" ]; then
     echo ""
-    echo "Creating symlink in current release..."
-    sudo mkdir -p ${DEPLOY_PATH}/current/storage/app
-    sudo ln -sf ${DEPLOY_PATH}/shared/google-drive-credentials.json \
-                ${DEPLOY_PATH}/current/storage/app/google-drive-credentials.json
-    echo "✓ Symlink created"
+    echo "Verifying accessibility from current release..."
+    if [ -L "${DEPLOY_PATH}/current/storage/app/google-drive-credentials.json" ]; then
+        echo "✓ Credentials accessible from current release"
+    else
+        echo "⚠️  Note: Deploy to make credentials available in current release"
+    fi
 fi
 
 echo ""

@@ -1,6 +1,23 @@
 # Quick Setup: Google Drive Credentials for EC2
 
-## 🚀 Quick Start (Easiest Method)
+## 🔧 Fix Current Deployment (Run This First!)
+
+If you just deployed and got the error "google-drive-credentials.json does not exist":
+
+```bash
+# SSH to EC2
+ssh -i "C:\Users\TECHNIFI\Downloads\newapp.pem" ubuntu@leads.radianceeco.co.uk
+
+# Run the fix script
+cd /var/www/radiance
+bash scripts/fix_google_credentials_now.sh
+```
+
+This will fix the current deployment immediately!
+
+---
+
+## 🚀 Quick Start (For Fresh Setup)
 
 ### Step 1: Make setup script executable (on your local machine)
 ```bash

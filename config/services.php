@@ -33,6 +33,7 @@ return [
 
     'google_drive' => [
         'enabled' => env('GOOGLE_DRIVE_ENABLED', false),
+        'auth_type' => env('GOOGLE_DRIVE_AUTH_TYPE', 'service_account'), // 'oauth' or 'service_account'
         'root_folder_id' => env('GOOGLE_DRIVE_ROOT_FOLDER_ID', null),
     ],
 

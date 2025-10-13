@@ -356,4 +356,30 @@ class LeadViewController extends Controller
         return redirect()->route('leads.show', $lead->id)
             ->with('success', 'Lead updated successfully!');
     }
+
+    /**
+     * Remove the specified lead from storage.
+     */
+    public function destroy($id)
+    {
+        // Check if user has permissions
+        if (!Auth::user()->hasPermissionTo('lead.delete')) {
+            return redirect()->route('leads.index')
+                ->with('error', 'You do not have permission to delete leads.');
+        }
+        
+        $lead = Lead::findOrFail($id);
+        
+        // Delete associated records
+        $lead->activities()->delete();
+        $lead->stageHistories()->delete();
+        $lead->documents()->delete();
+        $lead->eco4Calculations()->delete();
+        
+        // Delete the lead
+        $lead->delete();
+        
+        return redirect()->route('leads.index')
+            ->with('success', 'Lead deleted successfully!');
+    }
 }

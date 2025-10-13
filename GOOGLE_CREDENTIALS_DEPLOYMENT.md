@@ -116,18 +116,31 @@ The deploy script will automatically:
 ```
 /var/www/radiance/
 ├── shared/
-│   ├── .env                                    # Shared environment file
-│   ├── google-drive-credentials.json          # Shared Google credentials
-│   └── storage/                                # Shared storage (logs, sessions, etc.)
+│   ├── .env                                            # Shared environment file
+│   ├── google-drive-credentials.json                  # Source credentials file
+│   └── storage/                                        # Shared storage (logs, sessions, etc.)
 │       └── app/
 │           └── google-drive-credentials.json -> ../../google-drive-credentials.json (symlink)
 ├── releases/
 │   └── <commit-sha>/
 │       ├── .env -> /var/www/radiance/shared/.env
-│       └── storage -> /var/www/radiance/shared/storage
+│       └── storage -> /var/www/radiance/shared/storage  # Symlink to shared storage
 │           └── app/
-│               └── google-drive-credentials.json (symlinked via parent)
+│               └── google-drive-credentials.json (accessible via storage symlink)
 └── current -> /var/www/radiance/releases/<latest-sha>
+```
+
+**How Laravel accesses it:**
+```
+Laravel calls: storage_path('app/google-drive-credentials.json')
+    ↓
+Resolves to: /var/www/radiance/current/storage/app/google-drive-credentials.json
+    ↓
+storage is symlinked to: /var/www/radiance/shared/storage
+    ↓
+Actual path: /var/www/radiance/shared/storage/app/google-drive-credentials.json
+    ↓
+Which is symlinked to: /var/www/radiance/shared/google-drive-credentials.json
 ```
 
 ## Updated Deploy Script
@@ -135,11 +148,13 @@ The deploy script will automatically:
 The `scripts/deploy_remote.sh` now includes:
 
 ```bash
-# Symlink Google Drive credentials from shared if exists
+# Symlink Google Drive credentials into shared storage if exists
 if [ -f ${DEPLOY_PATH}/shared/google-drive-credentials.json ]; then
-  ln -sf ${DEPLOY_PATH}/shared/google-drive-credentials.json ${RELEASE_DIR}/storage/app/google-drive-credentials.json
+  ln -sf ${DEPLOY_PATH}/shared/google-drive-credentials.json ${DEPLOY_PATH}/shared/storage/app/google-drive-credentials.json
 fi
 ```
+
+This creates the symlink in the **shared storage**, so when each release's `storage` directory is symlinked to shared storage, the credentials are automatically available.
 
 ## Testing
 

@@ -19,3 +19,7 @@ yarn-error.log
 /.vscode
 google-drive-credentials.json
 storage/app/google-drive-credentials.json
+google-oauth-credentials.json
+storage/app/google-oauth-credentials.json
+google-oauth-token.json
+storage/app/google-oauth-token.json

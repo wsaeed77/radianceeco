@@ -14,6 +14,12 @@ mkdir -p ${DEPLOY_PATH}/shared/storage/app/public
 mkdir -p ${DEPLOY_PATH}/shared/storage/framework/{cache,sessions,views}
 mkdir -p ${DEPLOY_PATH}/shared/storage/logs
 
+# Symlink Google Drive credentials into shared storage if exists
+if [ -f ${DEPLOY_PATH}/shared/google-drive-credentials.json ]; then
+  # Use relative path for symlink to avoid "is a directory" issues
+  cd ${DEPLOY_PATH}/shared/storage/app && ln -sf ../../google-drive-credentials.json google-drive-credentials.json
+fi
+
 # Set permissions on shared storage (once)
 chown -R www-data:www-data ${DEPLOY_PATH}/shared/storage || true
 chmod -R 775 ${DEPLOY_PATH}/shared/storage || true
@@ -25,11 +31,6 @@ ln -sf ${DEPLOY_PATH}/shared/storage ${RELEASE_DIR}/storage
 # Symlink .env from shared if exists
 if [ -f ${DEPLOY_PATH}/shared/.env ]; then
   ln -sf ${DEPLOY_PATH}/shared/.env ${RELEASE_DIR}/.env
-fi
-
-# Symlink Google Drive credentials from shared if exists
-if [ -f ${DEPLOY_PATH}/shared/google-drive-credentials.json ]; then
-  ln -sf ${DEPLOY_PATH}/shared/google-drive-credentials.json ${RELEASE_DIR}/storage/app/google-drive-credentials.json
 fi
 
 # Set permissions for bootstrap/cache

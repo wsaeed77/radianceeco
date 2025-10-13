@@ -15,6 +15,8 @@ export default function ImportIndex() {
     // Step 1: List sheets
     const [sheets, setSheets] = useState([]);
     const [selectedSheet, setSelectedSheet] = useState(null);
+    const [manualSpreadsheetId, setManualSpreadsheetId] = useState('');
+    const [useManualId, setUseManualId] = useState(false);
     
     // Step 2: Select tab
     const [sheetInfo, setSheetInfo] = useState(null);
@@ -41,8 +43,10 @@ export default function ImportIndex() {
 
     // Load Google Sheets on mount
     useEffect(() => {
-        loadSheets();
-    }, []);
+        if (!useManualId) {
+            loadSheets();
+        }
+    }, [useManualId]);
 
     const loadSheets = async () => {
         setLoading(true);
@@ -206,39 +210,94 @@ export default function ImportIndex() {
                             {currentStep === 1 && (
                                 <div>
                                     <h3 className="text-lg font-semibold mb-4">Select a Google Sheet</h3>
-                                    {loading ? (
-                                        <div className="text-center py-8">
-                                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-                                            <p className="mt-4 text-gray-600">Loading sheets...</p>
-                                        </div>
-                                    ) : (
-                                        <div className="space-y-2">
-                                            {sheets.map((sheet) => (
-                                                <button
-                                                    key={sheet.id}
-                                                    onClick={() => handleSelectSheet(sheet)}
-                                                    className="w-full text-left p-4 border border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
-                                                >
-                                                    <div className="flex items-center justify-between">
-                                                        <div className="flex items-center space-x-3">
-                                                            <DocumentTextIcon className="h-6 w-6 text-green-600" />
-                                                            <div>
-                                                                <p className="font-medium">{sheet.name}</p>
-                                                                <p className="text-sm text-gray-500">
-                                                                    Owner: {sheet.owner} • Modified: {new Date(sheet.modified_time).toLocaleDateString()}
-                                                                </p>
-                                                            </div>
-                                                        </div>
-                                                        <ArrowRightIcon className="h-5 w-5 text-gray-400" />
-                                                    </div>
-                                                </button>
-                                            ))}
-                                            {sheets.length === 0 && (
-                                                <p className="text-center py-8 text-gray-500">
-                                                    No Google Sheets found. Make sure you have access to Google Sheets with your account.
+                                    
+                                    {/* Manual Spreadsheet ID Option */}
+                                    <div className="mb-6 p-4 border border-blue-200 bg-blue-50 rounded-lg">
+                                        <label className="flex items-center mb-3">
+                                            <input
+                                                type="checkbox"
+                                                checked={useManualId}
+                                                onChange={(e) => setUseManualId(e.target.checked)}
+                                                className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+                                            />
+                                            <span className="ml-2 text-sm font-medium text-gray-700">
+                                                Use Spreadsheet ID directly
+                                            </span>
+                                        </label>
+                                        
+                                        {useManualId && (
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                    Enter Google Sheets ID or URL
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={manualSpreadsheetId}
+                                                    onChange={(e) => setManualSpreadsheetId(e.target.value)}
+                                                    placeholder="1AbC...XyZ or https://docs.google.com/spreadsheets/d/1AbC...XyZ/edit"
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                                                />
+                                                <p className="mt-2 text-xs text-gray-500">
+                                                    Paste the full URL or just the spreadsheet ID from the URL
                                                 </p>
+                                                <Button
+                                                    className="mt-3"
+                                                    onClick={() => {
+                                                        let id = manualSpreadsheetId.trim();
+                                                        // Extract ID from URL if pasted
+                                                        const match = id.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+                                                        if (match) {
+                                                            id = match[1];
+                                                        }
+                                                        if (id) {
+                                                            handleSelectSheet({ id: id, name: 'Manual Sheet' });
+                                                        }
+                                                    }}
+                                                    disabled={!manualSpreadsheetId.trim() || loading}
+                                                >
+                                                    Continue with this Sheet
+                                                </Button>
+                                            </div>
+                                        )}
+                                    </div>
+                                    
+                                    {!useManualId && (
+                                        <>
+                                            {loading ? (
+                                                <div className="text-center py-8">
+                                                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                                                    <p className="mt-4 text-gray-600">Loading sheets...</p>
+                                                </div>
+                                            ) : (
+                                                <div className="space-y-2">
+                                                    {sheets.map((sheet) => (
+                                                        <button
+                                                            key={sheet.id}
+                                                            onClick={() => handleSelectSheet(sheet)}
+                                                            className="w-full text-left p-4 border border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
+                                                        >
+                                                            <div className="flex items-center justify-between">
+                                                                <div className="flex items-center space-x-3">
+                                                                    <DocumentTextIcon className="h-6 w-6 text-green-600" />
+                                                                    <div>
+                                                                        <p className="font-medium">{sheet.name}</p>
+                                                                        <p className="text-sm text-gray-500">
+                                                                            Owner: {sheet.owner} • Modified: {new Date(sheet.modified_time).toLocaleDateString()}
+                                                                        </p>
+                                                                    </div>
+                                                                </div>
+                                                                <ArrowRightIcon className="h-5 w-5 text-gray-400" />
+                                                            </div>
+                                                        </button>
+                                                    ))}
+                                                    {sheets.length === 0 && (
+                                                        <p className="text-center py-8 text-gray-500">
+                                                            No Google Sheets found. Try using the Spreadsheet ID option above.
+                                                        </p>
+                                                    )}
+                                                </div>
                                             )}
-                                        </div>
+                                        </>
                                     )}
                                 </div>
                             )}
