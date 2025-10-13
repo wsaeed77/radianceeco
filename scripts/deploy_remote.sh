@@ -9,17 +9,26 @@ RELEASE_DIR=${DEPLOY_PATH}/releases/${RELEASE}
 
 cd ${RELEASE_DIR}
 
-# Ensure shared dirs
-mkdir -p ${DEPLOY_PATH}/shared/storage
-mkdir -p storage/framework/{cache,sessions,views}
+# Ensure shared storage directory exists with proper structure
+mkdir -p ${DEPLOY_PATH}/shared/storage/app/public
+mkdir -p ${DEPLOY_PATH}/shared/storage/framework/{cache,sessions,views}
+mkdir -p ${DEPLOY_PATH}/shared/storage/logs
+
+# Set permissions on shared storage (once)
+chown -R www-data:www-data ${DEPLOY_PATH}/shared/storage || true
+chmod -R 775 ${DEPLOY_PATH}/shared/storage || true
+
+# Remove release storage and symlink to shared storage
+rm -rf ${RELEASE_DIR}/storage
+ln -sf ${DEPLOY_PATH}/shared/storage ${RELEASE_DIR}/storage
 
 # Symlink .env from shared if exists
 if [ -f ${DEPLOY_PATH}/shared/.env ]; then
   ln -sf ${DEPLOY_PATH}/shared/.env ${RELEASE_DIR}/.env
 fi
 
-# Set permissions for storage
-chmod -R 775 storage bootstrap/cache || true
+# Set permissions for bootstrap/cache
+chmod -R 775 bootstrap/cache || true
 
 # Optimize Laravel (composer already installed on CI)
 php artisan config:clear || true
@@ -35,8 +44,8 @@ php artisan view:cache
 # Point current to new release
 ln -sfn ${RELEASE_DIR} ${CURRENT}
 
-# Fix permissions for runtime
-chown -R www-data:www-data ${RELEASE_DIR}/storage ${RELEASE_DIR}/bootstrap/cache || true
+# Fix permissions for bootstrap/cache in release
+chown -R www-data:www-data ${RELEASE_DIR}/bootstrap/cache || true
 
 # Restart services
 systemctl reload php8.1-fpm || systemctl restart php8.1-fpm || true
