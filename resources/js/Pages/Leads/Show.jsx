@@ -9,7 +9,7 @@ import AddActivityModal from '@/Components/AddActivityModal';
 import AddDocumentModal from '@/Components/AddDocumentModal';
 import QuickAddActivityForm from '@/Components/QuickAddActivityForm';
 import Eco4CalculatorCard from '@/Components/Eco4CalculatorCard';
-import { PencilIcon, DocumentTextIcon, HomeIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { PencilIcon, DocumentTextIcon, HomeIcon, TrashIcon, FolderIcon, FolderOpenIcon, ChevronRightIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
 import { formatDate, formatDateTime } from '@/utils';
 
 export default function ShowLead({ lead, activityTypes, documentKinds, epc_certificates }) {
@@ -18,6 +18,7 @@ export default function ShowLead({ lead, activityTypes, documentKinds, epc_certi
     const [showEpcSelectionModal, setShowEpcSelectionModal] = useState(false);
     const [epcCertificates, setEpcCertificates] = useState(epc_certificates || []);
     const [epcSearchTerm, setEpcSearchTerm] = useState('');
+    const [expandedFolders, setExpandedFolders] = useState({});
 
     // Check if we have EPC certificates to display in modal
     useEffect(() => {
@@ -27,6 +28,43 @@ export default function ShowLead({ lead, activityTypes, documentKinds, epc_certi
             setEpcSearchTerm(''); // Reset search when opening modal
         }
     }, [epc_certificates]);
+
+    // Group documents by kind
+    const groupDocumentsByKind = () => {
+        if (!lead.documents || lead.documents.length === 0) return {};
+        
+        const grouped = {};
+        lead.documents.forEach(doc => {
+            const kind = doc.kind || 'other';
+            if (!grouped[kind]) {
+                grouped[kind] = [];
+            }
+            grouped[kind].push(doc);
+        });
+        return grouped;
+    };
+
+    // Format document kind label
+    const formatDocumentKind = (kind) => {
+        const labels = {
+            'survey_pics': 'Survey Pictures',
+            'floor_plan': 'Floor Plan',
+            'benefit_proof': 'Benefit Proof',
+            'gas_meter': 'Gas Meter',
+            'epr_report': 'EPR Report',
+            'epc': 'EPC',
+            'other': 'Other Documents'
+        };
+        return labels[kind] || kind.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    };
+
+    // Toggle folder expansion
+    const toggleFolder = (kind) => {
+        setExpandedFolders(prev => ({
+            ...prev,
+            [kind]: !prev[kind]
+        }));
+    };
 
     const handleDelete = () => {
         if (confirm(`Are you sure you want to delete ${lead.first_name} ${lead.last_name}? This action cannot be undone.`)) {
@@ -869,39 +907,86 @@ export default function ShowLead({ lead, activityTypes, documentKinds, epc_certi
                 </CardHeader>
                 <CardContent className="p-6">
                     {lead.documents && lead.documents.length > 0 ? (
-                        <div className="overflow-x-auto">
-                            <table className="min-w-full divide-y divide-gray-200">
-                                <thead className="bg-gray-50">
-                                    <tr>
-                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Kind</th>
-                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Size</th>
-                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Uploaded</th>
-                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="bg-white divide-y divide-gray-200">
-                                    {lead.documents.map((document) => (
-                                        <tr key={document.id}>
-                                            <td className="px-4 py-3 text-sm text-gray-900">{document.name}</td>
-                                            <td className="px-4 py-3 text-sm text-gray-900">{document.kind}</td>
-                                            <td className="px-4 py-3 text-sm text-gray-900">
-                                                {(document.size_bytes / 1024).toFixed(2)} KB
-                                            </td>
-                                            <td className="px-4 py-3 text-sm text-gray-900">{formatDate(document.created_at)}</td>
-                                            <td className="px-4 py-3 text-sm">
-                                                <Link href={route('documents.download', document.id)}>
-                                                    <Button variant="primary" size="sm">Download</Button>
-                                                </Link>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                        <div className="space-y-3">
+                            {Object.entries(groupDocumentsByKind()).map(([kind, documents]) => (
+                                <div key={kind} className="border border-gray-200 rounded-lg overflow-hidden">
+                                    {/* Folder Header */}
+                                    <div 
+                                        className="flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 cursor-pointer transition-colors"
+                                        onClick={() => toggleFolder(kind)}
+                                    >
+                                        <div className="flex items-center space-x-3">
+                                            {expandedFolders[kind] ? (
+                                                <>
+                                                    <FolderOpenIcon className="h-6 w-6 text-yellow-500" />
+                                                    <ChevronDownIcon className="h-4 w-4 text-gray-500" />
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <FolderIcon className="h-6 w-6 text-yellow-500" />
+                                                    <ChevronRightIcon className="h-4 w-4 text-gray-500" />
+                                                </>
+                                            )}
+                                            <div>
+                                                <h3 className="text-sm font-semibold text-gray-900">
+                                                    {formatDocumentKind(kind)}
+                                                </h3>
+                                                <p className="text-xs text-gray-500">
+                                                    {documents.length} {documents.length === 1 ? 'file' : 'files'}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="text-xs text-gray-500">
+                                            {expandedFolders[kind] ? 'Click to collapse' : 'Click to expand'}
+                                        </div>
+                                    </div>
+
+                                    {/* Folder Contents */}
+                                    {expandedFolders[kind] && (
+                                        <div className="bg-white">
+                                            <table className="min-w-full divide-y divide-gray-200">
+                                                <thead className="bg-gray-50">
+                                                    <tr>
+                                                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                                                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Size</th>
+                                                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Uploaded</th>
+                                                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="bg-white divide-y divide-gray-200">
+                                                    {documents.map((document) => (
+                                                        <tr key={document.id} className="hover:bg-gray-50">
+                                                            <td className="px-4 py-3 text-sm text-gray-900">
+                                                                <div className="flex items-center space-x-2">
+                                                                    <DocumentTextIcon className="h-4 w-4 text-gray-400" />
+                                                                    <span>{document.name}</span>
+                                                                </div>
+                                                            </td>
+                                                            <td className="px-4 py-3 text-sm text-gray-500">
+                                                                {(document.size_bytes / 1024).toFixed(2)} KB
+                                                            </td>
+                                                            <td className="px-4 py-3 text-sm text-gray-500">
+                                                                {formatDate(document.created_at)}
+                                                            </td>
+                                                            <td className="px-4 py-3 text-sm">
+                                                                <Link href={route('documents.download', document.id)}>
+                                                                    <Button variant="primary" size="sm">Download</Button>
+                                                                </Link>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
                         </div>
                     ) : (
                         <div className="text-center py-8">
-                            <p className="text-gray-500">No documents found.</p>
+                            <FolderIcon className="mx-auto h-12 w-12 text-gray-400" />
+                            <p className="mt-2 text-sm text-gray-500">No documents found.</p>
+                            <p className="text-xs text-gray-400">Upload documents to organize them by type</p>
                         </div>
                     )}
                 </CardContent>
