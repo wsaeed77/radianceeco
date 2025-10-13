@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 
 class SettingsPermissionSeeder extends Seeder
 {
@@ -17,10 +18,8 @@ class SettingsPermissionSeeder extends Seeder
         ];
 
         foreach ($permissions as $name => $description) {
-            Permission::firstOrCreate(
-                ['name' => $name],
-                ['guard_name' => 'web']
-            );
+            // Ensure permissions exist explicitly on the web guard
+            Permission::findOrCreate($name, 'web');
         }
 
         // Give admin role all settings permissions
@@ -29,6 +28,9 @@ class SettingsPermissionSeeder extends Seeder
             $adminRole->givePermissionTo(array_keys($permissions));
             $this->command->info('✓ Settings permissions granted to admin role');
         }
+
+        // Clear Spatie permission cache so changes take effect immediately
+        app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
         $this->command->info('✓ Settings permissions created successfully');
     }

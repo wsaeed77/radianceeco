@@ -18,6 +18,63 @@ class EpcApiService
     }
 
     /**
+     * Fetch recommendations by LMK key
+     * Docs: https://epc.opendatacommunities.org/openapi/index.html#/domestic/get_domestic_recommendations__lmk_key_
+     */
+    public function fetchRecommendationsByLmk(string $lmkKey)
+    {
+        try {
+            if (!$this->apiKey) {
+                return [
+                    'success' => false,
+                    'message' => 'EPC API key is not configured. Please add EPC_API_KEY to your .env file.',
+                ];
+            }
+
+            $url = rtrim($this->apiUrl, '/') . "/domestic/recommendations/{$lmkKey}";
+
+            if (strpos($this->apiKey, ':') !== false) {
+                list($username, $password) = explode(':', $this->apiKey, 2);
+            } else {
+                $username = $this->apiKey;
+                $password = '';
+            }
+
+            $response = Http::withBasicAuth($username, $password)
+                ->accept('application/json')
+                ->get($url);
+
+            if (!$response->successful()) {
+                Log::error('EPC Recommendations API Error', [
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                ]);
+                return [
+                    'success' => false,
+                    'message' => 'Failed to fetch recommendations',
+                    'status' => $response->status(),
+                ];
+            }
+
+            $data = $response->json();
+            // API returns an array of recommendation items
+            return [
+                'success' => true,
+                'data' => $data,
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('EPC Recommendations Exception', [
+                'message' => $e->getMessage(),
+            ]);
+            return [
+                'success' => false,
+                'message' => 'Error connecting to EPC API: ' . $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
      * Fetch EPC certificate by postcode and address
      */
     public function fetchCertificate($postcode, $address = null)

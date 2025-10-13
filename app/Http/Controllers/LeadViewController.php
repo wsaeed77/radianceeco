@@ -140,15 +140,15 @@ class LeadViewController extends Controller
         
         // Validate the request
         $validated = $request->validate([
-            'first_name' => 'required|string|max:255',
-            'last_name' => 'required|string|max:255',
+            'first_name' => 'nullable|string|max:255',
+            'last_name' => 'nullable|string|max:255',
             'email' => 'nullable|email|max:255',
             'phone' => 'nullable|string|max:20',
             'address_line_1' => 'nullable|string|max:255',
             'address_line_2' => 'nullable|string|max:255',
             'city' => 'nullable|string|max:255',
             'assigned_to' => 'nullable|string|max:50',
-            'zip_code' => 'nullable|string|max:20',
+            'zip_code' => 'required|string|max:20',
             'status' => 'required|string',
             'stage' => 'required|string',
             'source' => 'nullable|string|max:255',
@@ -256,15 +256,15 @@ class LeadViewController extends Controller
         
         // Validate the request
         $validated = $request->validate([
-            'first_name' => 'required|string|max:255',
-            'last_name' => 'required|string|max:255',
+            'first_name' => 'nullable|string|max:255',
+            'last_name' => 'nullable|string|max:255',
             'email' => 'nullable|email|max:255',
             'phone' => 'nullable|string|max:20',
             'address_line_1' => 'nullable|string|max:255',
             'address_line_2' => 'nullable|string|max:255',
             'city' => 'nullable|string|max:255',
             'assigned_to' => 'nullable|string|max:50',
-            'zip_code' => 'nullable|string|max:20',
+            'zip_code' => 'required|string|max:20',
             'status' => 'required|string',
             'stage' => 'required|string',
             'source' => 'nullable|string|max:255',

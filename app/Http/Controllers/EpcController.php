@@ -104,12 +104,26 @@ class EpcController extends Controller
         $formattedData = $this->epcService->formatEpcData($certificateData);
         
         // Update lead with EPC data
-        $lead->update([
+        $update = [
             'epc_data' => $formattedData, // Don't json_encode - Laravel will do it automatically
             'epc_rating' => $formattedData['current_energy_rating'],
             'epc_details' => $formattedData['address'],
             'epc_fetched_at' => now(),
-        ]);
+        ];
+
+        // Optionally update address fields from selected certificate when requested
+        if (($certificateData['__update_address'] ?? false) === true) {
+            $addr1 = $certificateData['address'] ?? ($certificateData['address1'] ?? null);
+            $addr2 = $certificateData['address2'] ?? null;
+            $city = $certificateData['address3'] ?? null;
+            $postcode = $certificateData['postcode'] ?? null;
+            if ($addr1) $update['address_line_1'] = $addr1;
+            if ($addr2) $update['address_line_2'] = $addr2;
+            if ($city) $update['city'] = $city;
+            if ($postcode) $update['zip_code'] = $postcode; // field named zip_code in forms
+        }
+
+        $lead->update($update);
 
         Log::info('EPC Certificate Selected and Saved', [
             'lead_id' => $lead->id,
@@ -129,9 +143,98 @@ class EpcController extends Controller
             'epc_rating' => null,
             'epc_details' => null,
             'epc_fetched_at' => null,
+                'epc_recommendations' => null,
+                'epc_recommendations_fetched_at' => null,
         ]);
 
         return back()->with('success', 'EPC data cleared successfully!');
     }
+
+        /**
+         * Fetch and save EPC recommendations using the LMK key in saved epc_data
+         */
+        public function fetchRecommendations(Lead $lead, EpcApiService $service)
+        {
+            if (!$lead->epc_data || empty($lead->epc_data['certificate_number'])) {
+                return back()->with('error', 'No EPC certificate found on this lead. Please fetch EPC first.');
+            }
+
+            $lmk = $lead->epc_data['certificate_number'];
+            $result = $service->fetchRecommendationsByLmk($lmk);
+
+            if (!$result['success']) {
+                return back()->with('error', $result['message'] ?? 'Failed to fetch recommendations');
+            }
+
+            // Normalize recommendations to a flat array of associative items
+            $items = [];
+            $data = $result['data'];
+
+            if (is_array($data)) {
+                // Case 1: { recommendations: [...] }
+                if (isset($data['recommendations']) && is_array($data['recommendations'])) {
+                    $recs = $data['recommendations'];
+                    // If first entry is a list of column names, convert matrix to assoc rows
+                    if (isset($recs[0]) && is_array($recs[0])) {
+                        $allStrings = true;
+                        foreach ($recs[0] as $v) { if (!is_string($v)) { $allStrings = false; break; } }
+                        if ($allStrings) {
+                            $cols = $recs[0];
+                            foreach (array_slice($recs, 1) as $row) {
+                                if (is_array($row)) {
+                                    $items[] = array_combine($cols, array_pad($row, count($cols), null));
+                                }
+                            }
+                        } else {
+                            $items = array_values($recs);
+                        }
+                    } else {
+                        $items = array_values($recs);
+                    }
+                }
+
+                // Case 2: { rows: [[...], [...]], column-names: [ ... ] }
+                elseif (isset($data['rows']) && isset($data['column-names']) && is_array($data['rows']) && is_array($data['column-names'])) {
+                    $cols = $data['column-names'];
+                    foreach ($data['rows'] as $row) {
+                        // If provider already returns associative rows, take as-is
+                        $isAssoc = is_array($row) && array_keys($row) !== range(0, count((array)$row) - 1);
+                        if ($isAssoc) {
+                            $items[] = $row;
+                        } else {
+                            $items[] = array_combine($cols, array_pad((array)$row, count($cols), null));
+                        }
+                    }
+                }
+
+                // Case 3: Plain matrix where first element is a list of column names, rest are rows
+                elseif (isset($data[0]) && is_array($data[0]) && count($data[0]) > 0 && array_values($data[0]) === $data[0]) {
+                    $cols = $data[0];
+                    foreach (array_slice($data, 1) as $row) {
+                        if (is_array($row)) {
+                            $items[] = array_combine($cols, array_pad($row, count($cols), null));
+                        }
+                    }
+                }
+
+                // Case 4: Already an array of associative items
+                else {
+                    $items = array_values($data);
+                }
+            }
+
+            $lead->update([
+                'epc_recommendations' => $items,
+                'epc_recommendations_fetched_at' => now(),
+            ]);
+
+            Log::info('EPC recommendations saved', [
+                'lead_id' => $lead->id,
+                'count' => count($items),
+                'sample' => $items[0] ?? null,
+            ]);
+
+            return back()->with('success', 'EPC recommendations fetched successfully.');
+        }
 }
 

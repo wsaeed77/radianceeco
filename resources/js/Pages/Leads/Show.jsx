@@ -367,6 +367,16 @@ export default function ShowLead({ lead, activityTypes, documentKinds, epc_certi
                                     {lead.epc_data ? 'Refresh' : 'Fetch'} EPC Report
                                 </Button>
                             </form>
+                            {lead.epc_data && (
+                                <form onSubmit={(e) => {
+                                    e.preventDefault();
+                                    router.post(route('epc.recommendations', lead.id));
+                                }}>
+                                    <Button variant="secondary" size="sm" type="submit">
+                                        {lead.epc_recommendations ? 'Refresh' : 'Fetch'} Recommendations
+                                    </Button>
+                                </form>
+                            )}
                         </div>
                     </div>
                     {lead.epc_fetched_at && (
@@ -583,6 +593,44 @@ export default function ShowLead({ lead, activityTypes, documentKinds, epc_certi
                                     </table>
                                 </div>
                             </div>
+
+                            {/* Recommendations */}
+                            {lead.epc_recommendations && lead.epc_recommendations.length > 0 && (
+                                <div>
+                                    <h3 className="text-lg font-bold text-gray-900 mb-4">Recommended Improvements</h3>
+                                    <div className="overflow-x-auto">
+                                        <table className="min-w-full divide-y divide-gray-200">
+                                            <thead className="bg-gray-50">
+                                                <tr>
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Measure</th>
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estimated Cost</th>
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Typical Saving</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="bg-white divide-y divide-gray-200">
+                                                {lead.epc_recommendations.map((rec, idx) => {
+                                                    const measure = rec['improvement-summary-text'] || rec['improvement-descr-text'] || rec.suggestion || rec.measure || '—';
+                                                    const category = rec['improvement-id-text'] || rec['improvement-id'] || rec.category || '—';
+                                                    const cost = rec['indicative-cost'] || rec.cost || '—';
+                                                    const saving = rec['typical-saving'] || rec.saving || '—';
+                                                    return (
+                                                    <tr key={idx}>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{measure}</td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{category}</td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{cost}</td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{saving}</td>
+                                                    </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    {lead.epc_recommendations_fetched_at && (
+                                        <p className="text-sm text-gray-500 mt-2">Last fetched: {formatDateTime(lead.epc_recommendations_fetched_at)}</p>
+                                    )}
+                                </div>
+                            )}
 
                             {/* Energy Costs */}
                             {(lead.epc_data.heating_cost_current || lead.epc_data.lighting_cost_current || lead.epc_data.hot_water_cost_current) && (
@@ -920,6 +968,14 @@ export default function ShowLead({ lead, activityTypes, documentKinds, epc_certi
                                             )}
                                         </div>
                                         
+                                        {/* Update Address Toggle */}
+                                        <div className="mt-3">
+                                            <label className="inline-flex items-center text-sm text-gray-700">
+                                                <input type="checkbox" id="updateAddressChk" className="mr-2 rounded border-gray-300" />
+                                                Update Property Address on selection
+                                            </label>
+                                        </div>
+
                                         {/* Filtered Results */}
                                         {(() => {
                                             const filteredCertificates = epcCertificates.filter(cert => {
@@ -950,7 +1006,15 @@ export default function ShowLead({ lead, activityTypes, documentKinds, epc_certi
                                                 <div
                                                     key={index}
                                                     className="border-2 border-gray-200 rounded-lg p-4 hover:border-blue-500 hover:bg-blue-50 transition-colors cursor-pointer"
-                                                    onClick={() => handleSelectEpcCertificate(cert)}
+                                                    onClick={() => {
+                                                        const chk = document.getElementById('updateAddressChk');
+                                                        const updateAddress = chk && chk.checked;
+                                                        const payload = { ...cert };
+                                                        if (updateAddress) {
+                                                            payload.__update_address = true;
+                                                        }
+                                                        handleSelectEpcCertificate(payload);
+                                                    }}
                                                 >
                                                     <div className="flex items-start justify-between">
                                                         <div className="flex-1">

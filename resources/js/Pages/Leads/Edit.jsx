@@ -121,14 +121,14 @@ export default function EditLead({ lead, sources, stages, statuses, agents }) {
                                             value={data.first_name}
                                             onChange={(e) => setData('first_name', e.target.value)}
                                             error={errors.first_name}
-                                            required
+                                            required={false}
                                         />
                                         <FormInput
                                             label="Last Name"
                                             value={data.last_name}
                                             onChange={(e) => setData('last_name', e.target.value)}
                                             error={errors.last_name}
-                                            required
+                                            required={false}
                                         />
                                     </div>
 
@@ -170,10 +170,11 @@ export default function EditLead({ lead, sources, stages, statuses, agents }) {
                                             error={errors.city}
                                         />
                                         <FormInput
-                                            label="Zip Code"
+                                            label="Postcode"
                                             value={data.zip_code}
                                             onChange={(e) => setData('zip_code', e.target.value)}
                                             error={errors.zip_code}
+                                            required
                                         />
                                     </div>
                                 </div>

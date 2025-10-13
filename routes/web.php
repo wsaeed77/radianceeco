@@ -76,6 +76,7 @@ use App\Http\Controllers\EpcController;
 Route::post('/leads/{lead}/epc/fetch', [EpcController::class, 'fetchForLead'])->name('epc.fetch');
 Route::post('/leads/{lead}/epc/save', [EpcController::class, 'saveSelectedCertificate'])->name('epc.save');
 Route::delete('/leads/{lead}/epc', [EpcController::class, 'clearForLead'])->name('epc.clear');
+Route::post('/leads/{lead}/epc/recommendations', [EpcController::class, 'fetchRecommendations'])->name('epc.recommendations');
 
 // ECO4 Calculator routes (web-based, uses session auth)
 use App\Http\Controllers\Api\Eco4CalculatorController;

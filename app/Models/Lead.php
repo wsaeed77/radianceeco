@@ -87,6 +87,8 @@ class Lead extends Model
         // EPC fields
         'epc_data',
         'epc_fetched_at',
+        'epc_recommendations',
+        'epc_recommendations_fetched_at',
     ];
 
     /**
@@ -104,6 +106,8 @@ class Lead extends Model
         'source' => LeadSource::class,
         'epc_data' => 'array',
         'epc_fetched_at' => 'datetime',
+        'epc_recommendations' => 'array',
+        'epc_recommendations_fetched_at' => 'datetime',
     ];
 
     /**
