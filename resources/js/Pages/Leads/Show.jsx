@@ -185,7 +185,7 @@ export default function ShowLead({ lead, activityTypes, documentKinds, epc_certi
                                         <>
                                             {lead.address_line_1}<br />
                                             {lead.address_line_2 && <>{lead.address_line_2}<br /></>}
-                                            {lead.city}, {lead.assigned_to} {lead.zip_code}
+                                            {lead.city} {lead.zip_code}
                                         </>
                                     ) : 'N/A'}
                                 </dd>
@@ -768,7 +768,7 @@ export default function ShowLead({ lead, activityTypes, documentKinds, epc_certi
             <Card padding={false} className="mb-6">
                 <CardHeader className="bg-indigo-600">
                     <div className="flex items-center justify-between">
-                        <CardTitle className="text-white">PR (Energy Performance Report) and Submission</CardTitle>
+                        <CardTitle className="text-white">EPR (Energy Performance Report) and Submission</CardTitle>
                         <Link href={route('leads.edit', lead.id)}>
                             <Button variant="secondary" size="sm">
                                 <PencilIcon className="-ml-1 mr-2 h-4 w-4" />
