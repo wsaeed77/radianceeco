@@ -11,6 +11,14 @@ enum LeadSource: string
     case IMPORT = 'Import';
     case UNKNOWN = 'Unknown';
 
+    /**
+     * Get user-friendly label for display
+     */
+    public function label(): string
+    {
+        return $this->value;
+    }
+
     public static function values(): array
     {
         return array_column(self::cases(), 'value');

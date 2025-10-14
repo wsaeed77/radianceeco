@@ -59,6 +59,9 @@ class Lead extends Model
         'address_line_2',
         'assigned_to',
         'zip_code',
+        'latitude',
+        'longitude',
+        'geocoded_at',
         'source',
         'source_details',
         'notes',
@@ -119,6 +122,7 @@ class Lead extends Model
         'epc_recommendations_fetched_at' => 'datetime',
         'epr_measures' => 'array',
         'epr_payments' => 'array',
+        'geocoded_at' => 'datetime',
     ];
 
     /**

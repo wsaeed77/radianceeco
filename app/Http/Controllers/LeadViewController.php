@@ -9,6 +9,7 @@ use App\Enums\DocumentKind;
 use App\Models\Lead;
 use App\Models\Activity;
 use App\Enums\ActivityType;
+use App\Services\GeocodingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -214,6 +215,26 @@ class LeadViewController extends Controller
         
         // Create the lead
         $lead = Lead::create($validated);
+        
+        // Geocode the address in the background (async)
+        dispatch(function () use ($lead) {
+            $geocodingService = app(GeocodingService::class);
+            $address = $geocodingService->buildAddress([
+                'address_line_1' => $lead->address_line_1,
+                'address_line_2' => $lead->address_line_2,
+                'city' => $lead->city,
+                'zip_code' => $lead->zip_code,
+            ]);
+            
+            $coordinates = $geocodingService->geocode($address);
+            if ($coordinates) {
+                $lead->update([
+                    'latitude' => $coordinates['latitude'],
+                    'longitude' => $coordinates['longitude'],
+                    'geocoded_at' => now(),
+                ]);
+            }
+        })->afterResponse();
         
         // Log lead creation
         Activity::create([

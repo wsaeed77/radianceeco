@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\LeadViewController;
+use App\Http\Controllers\MapController;
 
 /*
 |--------------------------------------------------------------------------
@@ -31,6 +32,10 @@ Route::get('/home', function() {
 
 // Dashboard routes
 Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+// Map routes
+Route::get('/map', [MapController::class, 'index'])->name('map.index');
+Route::get('/map/leads', [MapController::class, 'getLeads'])->name('map.leads');
 
 // Lead routes
 Route::get('/leads', [LeadViewController::class, 'index'])->name('leads.index');

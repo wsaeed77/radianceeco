@@ -11,6 +11,7 @@ import {
     Cog6ToothIcon,
     ArrowLeftOnRectangleIcon,
     ArrowDownTrayIcon,
+    MapIcon,
 } from '@heroicons/react/24/outline';
 import Alert from '@/Components/Alert';
 
@@ -22,6 +23,7 @@ export default function AppLayout({ children, header }) {
     const navigation = [
         { name: 'Dashboard', href: route('dashboard'), icon: HomeIcon },
         { name: 'Leads', href: route('leads.index'), icon: UserGroupIcon },
+        { name: 'Map', href: route('map.index'), icon: MapIcon },
         { name: 'Import', href: route('import.index'), icon: ArrowDownTrayIcon },
         { name: 'Users', href: route('users.index'), icon: UsersIcon },
         { name: 'Logs', href: route('activities.index'), icon: DocumentTextIcon },
