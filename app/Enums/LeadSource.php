@@ -9,6 +9,7 @@ enum LeadSource: string
     case REFERENCE_CLIENT = 'Reference (Client)';
     case REFERENCE_OTHER = 'Reference (Other)';
     case IMPORT = 'Import';
+    case WICKY_AGENT = 'Wicky (Agent)';
     case UNKNOWN = 'Unknown';
 
     /**
@@ -45,6 +46,7 @@ enum LeadSource: string
             'reference (client)', 'client reference', 'client' => self::REFERENCE_CLIENT,
             'reference (other)', 'other reference', 'reference' => self::REFERENCE_OTHER,
             'import', 'imported', 'bulk import' => self::IMPORT,
+            'wicky (agent)', 'wicky', 'agent' => self::WICKY_AGENT,
             default => self::UNKNOWN,
         };
     }
