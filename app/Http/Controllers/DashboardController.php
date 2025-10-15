@@ -41,9 +41,16 @@ class DashboardController extends Controller
         $totalLeads = Lead::count();
         
         // Calculate stats for cards
-        $installedCount = $statusCounts['installed'] ?? 0;
-        $inProgressCount = ($statusCounts['survey_done'] ?? 0) + ($statusCounts['need_data_match'] ?? 0);
+        $installedCount = $statusCounts['property_installed'] ?? 0;
         $holdCount = $statusCounts['hold'] ?? 0;
+        
+        // In Progress: all statuses except hold and property_installed
+        $inProgressCount = 0;
+        foreach ($statusCounts as $status => $count) {
+            if ($status !== 'hold' && $status !== 'property_installed') {
+                $inProgressCount += $count;
+            }
+        }
         
         // Get recent leads
         $recentLeads = Lead::latest()->take(5)->get();
