@@ -114,6 +114,22 @@ export default function ShowLead({ lead, activityTypes, documentKinds, epc_certi
         return <Badge variant={variants[rating] || 'default'}>{rating}</Badge>;
     };
 
+    // Map numeric score (0-100) to EPC-like band label used by EPR
+    const getLabelFromScore = (score) => {
+        const n = parseInt(score, 10);
+        if (isNaN(n)) return null;
+        if (n >= 92) return 'A';
+        if (n >= 81) return 'B';
+        if (n >= 80) return 'High C';
+        if (n >= 69) return 'Low C';
+        if (n >= 68) return 'High D';
+        if (n >= 55) return 'Low D';
+        if (n >= 39) return 'High E';
+        if (n >= 21) return 'Low E';
+        if (n >= 1) return 'G';
+        return null;
+    };
+
     return (
         <AppLayout>
             <Head title={`${lead.first_name} ${lead.last_name}`} />
@@ -801,16 +817,28 @@ export default function ShowLead({ lead, activityTypes, documentKinds, epc_certi
                             <p className="text-gray-900">{lead.floor_area || 'Not specified'}</p>
                         </div>
 
-                        {/* Pre Rating */}
+                        {/* Pre Rating (Before) - computed from score */}
                         <div>
                             <h4 className="text-sm font-semibold text-gray-700 mb-1">Pre Rating (Before)</h4>
-                            <p className="text-gray-900">{lead.epr_pre_rating || 'Not specified'}</p>
+                            <p className="text-gray-900">{(() => {
+                                const label = getLabelFromScore(lead.epr_pre_rating_score);
+                                return label ? label : 'Not specified';
+                            })()}</p>
+                            {lead.epr_pre_rating_score != null && (
+                                <p className="text-xs text-gray-500 mt-1">Score: {lead.epr_pre_rating_score}</p>
+                            )}
                         </div>
 
-                        {/* Post Rating */}
+                        {/* Post Rating (After) - computed from score */}
                         <div>
                             <h4 className="text-sm font-semibold text-gray-700 mb-1">Post Rating (After)</h4>
-                            <p className="text-gray-900">{lead.epr_post_rating || 'Not specified'}</p>
+                            <p className="text-gray-900">{(() => {
+                                const label = getLabelFromScore(lead.epr_post_rating_score);
+                                return label ? label : 'Not specified';
+                            })()}</p>
+                            {lead.epr_post_rating_score != null && (
+                                <p className="text-xs text-gray-500 mt-1">Score: {lead.epr_post_rating_score}</p>
+                            )}
                         </div>
 
                         {/* ABS */}

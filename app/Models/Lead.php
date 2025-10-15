@@ -97,7 +97,9 @@ class Lead extends Model
         // EPR fields
         'epr_measures',
         'epr_pre_rating',
+        'epr_pre_rating_score',
         'epr_post_rating',
+        'epr_post_rating_score',
         'epr_abs',
         'epr_amount_funded',
         'epr_payments',
@@ -122,6 +124,8 @@ class Lead extends Model
         'epc_recommendations_fetched_at' => 'datetime',
         'epr_measures' => 'array',
         'epr_payments' => 'array',
+        'epr_pre_rating_score' => 'integer',
+        'epr_post_rating_score' => 'integer',
         'geocoded_at' => 'datetime',
     ];
 

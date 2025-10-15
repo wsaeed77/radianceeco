@@ -50,6 +50,8 @@ export default function EditLead({ lead, sources, stages, statuses, agents }) {
         epr_measures: lead.epr_measures || [],
         epr_pre_rating: lead.epr_pre_rating || '',
         epr_post_rating: lead.epr_post_rating || '',
+        epr_pre_rating_score: lead.epr_pre_rating_score || '',
+        epr_post_rating_score: lead.epr_post_rating_score || '',
         epr_abs: lead.epr_abs || '',
         epr_amount_funded: lead.epr_amount_funded || '',
         epr_payments: lead.epr_payments || [],
@@ -563,7 +565,7 @@ export default function EditLead({ lead, sources, stages, statuses, agents }) {
                                         Measures
                                     </label>
                                     <div className="space-y-2">
-                                        {['Loft Insulation', 'Smart Thermostat', 'TRV', 'Programmer and Room Thermostat'].map((measure) => (
+                                        {['Loft Insulation', 'Smart Thermostat', 'TRV', 'Programmer and Room Thermostat', 'Boiler'].map((measure) => (
                                             <label key={measure} className="flex items-center">
                                                 <input
                                                     type="checkbox"
@@ -599,40 +601,28 @@ export default function EditLead({ lead, sources, stages, statuses, agents }) {
                                     </FormSelect>
                                 </div>
 
-                                {/* Pre and Post Rating */}
+                                {/* Pre/Post Rating Scores */}
                                 <div className="grid grid-cols-2 gap-4">
-                                    <FormSelect
-                                        label="Pre Rating (Before)"
-                                        value={data.epr_pre_rating}
-                                        onChange={(e) => setData('epr_pre_rating', e.target.value)}
-                                        error={errors.epr_pre_rating}
-                                    >
-                                        <option value="">Select Pre Rating</option>
-                                        <option value="21 (Low E)">21 (Low E)</option>
-                                        <option value="39 (High E)">39 (High E)</option>
-                                        <option value="55 (Low D)">55 (Low D)</option>
-                                        <option value="68 (High D)">68 (High D)</option>
-                                        <option value="69 (Low C)">69 (Low C)</option>
-                                        <option value="80 (High C)">80 (High C)</option>
-                                        <option value="81 (B)">81 (B)</option>
-                                        <option value="92 (A)">92 (A)</option>
-                                    </FormSelect>
-                                    <FormSelect
-                                        label="Post Rating (After)"
-                                        value={data.epr_post_rating}
-                                        onChange={(e) => setData('epr_post_rating', e.target.value)}
-                                        error={errors.epr_post_rating}
-                                    >
-                                        <option value="">Select Post Rating</option>
-                                        <option value="21 (Low E)">21 (Low E)</option>
-                                        <option value="39 (High E)">39 (High E)</option>
-                                        <option value="55 (Low D)">55 (Low D)</option>
-                                        <option value="68 (High D)">68 (High D)</option>
-                                        <option value="69 (Low C)">69 (Low C)</option>
-                                        <option value="80 (High C)">80 (High C)</option>
-                                        <option value="81 (B)">81 (B)</option>
-                                        <option value="92 (A)">92 (A)</option>
-                                    </FormSelect>
+                                    <FormInput
+                                        label="Pre Rating Score"
+                                        type="number"
+                                        min="0"
+                                        max="100"
+                                        value={data.epr_pre_rating_score}
+                                        onChange={(e) => setData('epr_pre_rating_score', e.target.value)}
+                                        error={errors.epr_pre_rating_score}
+                                        placeholder="e.g., 67"
+                                    />
+                                    <FormInput
+                                        label="Post Rating Score"
+                                        type="number"
+                                        min="0"
+                                        max="100"
+                                        value={data.epr_post_rating_score}
+                                        onChange={(e) => setData('epr_post_rating_score', e.target.value)}
+                                        error={errors.epr_post_rating_score}
+                                        placeholder="e.g., 80"
+                                    />
                                 </div>
 
                                 {/* ABS and Amount Funded */}
