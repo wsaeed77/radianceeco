@@ -82,14 +82,18 @@ export default function ShowLead({ lead, activityTypes, documentKinds, epc_certi
             }
         });
     };
-    const getStatusBadge = (status, statusLabel) => {
-        const variants = {
-            installed: 'success',
-            survey_done: 'info',
-            need_data_match: 'warning',
-            hold: 'danger',
+    const getStatusBadge = (status, statusLabel, statusColor) => {
+        // Use the color from the status model if available, otherwise fallback to default
+        const colorMap = {
+            'primary': 'primary',
+            'secondary': 'secondary', 
+            'success': 'success',
+            'danger': 'danger',
+            'warning': 'warning',
+            'info': 'info',
         };
-        return <Badge variant={variants[status] || 'default'}>{statusLabel}</Badge>;
+        const variant = colorMap[statusColor] || 'default';
+        return <Badge variant={variant}>{statusLabel}</Badge>;
     };
 
     const getDataMatchBadge = (status) => {
@@ -188,7 +192,7 @@ export default function ShowLead({ lead, activityTypes, documentKinds, epc_certi
                             </div>
                             <div className="grid grid-cols-3 gap-4">
                                 <dt className="font-semibold text-gray-700">Status:</dt>
-                                <dd className="col-span-2">{getStatusBadge(lead.status_model?.name || lead.status, lead.status_model?.name || lead.status_label)}</dd>
+                                <dd className="col-span-2">{getStatusBadge(lead.status_model?.name || lead.status, lead.status_model?.name || lead.status_label, lead.status_model?.color)}</dd>
                             </div>
                             <div className="grid grid-cols-3 gap-4">
                                 <dt className="font-semibold text-gray-700">Team:</dt>

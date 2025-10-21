@@ -16,15 +16,18 @@ export default function LeadsIndex({ leads, statuses, stages, sources, filters }
     const [stage, setStage] = useState(filters?.stage || '');
     const [source, setSource] = useState(filters?.source || '');
 
-    const getStatusBadge = (status, statusLabel) => {
-        const variants = {
-            new: 'info',
-            contacted: 'warning',
-            qualified: 'primary',
-            converted: 'success',
-            lost: 'danger',
+    const getStatusBadge = (status, statusLabel, statusColor) => {
+        // Use the color from the status model if available, otherwise fallback to default
+        const colorMap = {
+            'primary': 'primary',
+            'secondary': 'secondary', 
+            'success': 'success',
+            'danger': 'danger',
+            'warning': 'warning',
+            'info': 'info',
         };
-        return <Badge variant={variants[status] || 'default'}>{statusLabel}</Badge>;
+        const variant = colorMap[statusColor] || 'default';
+        return <Badge variant={variant}>{statusLabel}</Badge>;
     };
 
     const handleFilter = () => {
@@ -200,7 +203,7 @@ export default function LeadsIndex({ leads, statuses, stages, sources, filters }
                                                 )}
                                             </div>
                                         </TableCell>
-                                        <TableCell>{getStatusBadge(lead.status_model?.name || lead.status, lead.status_model?.name || lead.status_label)}</TableCell>
+                                        <TableCell>{getStatusBadge(lead.status_model?.name || lead.status, lead.status_model?.name || lead.status_label, lead.status_model?.color)}</TableCell>
                                         <TableCell>
                                             <div className="flex gap-2">
                                                 <Link href={route('leads.show', lead.id)}>
