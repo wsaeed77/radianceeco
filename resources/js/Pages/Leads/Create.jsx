@@ -19,7 +19,7 @@ export default function CreateLead({ sources, stages, statuses, agents }) {
         city: '',
         assigned_to: '',
         zip_code: '',
-        status: 'new',
+        status_id: '',
         stage: 'radiance_team',
         source: '',
         source_details: '',
@@ -233,9 +233,9 @@ export default function CreateLead({ sources, stages, statuses, agents }) {
                                     <div className="grid grid-cols-2 gap-4">
                                         <FormSelect
                                             label="Status"
-                                            value={data.status}
-                                            onChange={(e) => setData('status', e.target.value)}
-                                            error={errors.status}
+                                            value={data.status_id}
+                                            onChange={(e) => setData('status_id', e.target.value)}
+                                            error={errors.status_id}
                                             required
                                         >
                                             <option value="">Select Status</option>

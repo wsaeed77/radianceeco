@@ -46,6 +46,10 @@ class UpdateRolePermissionsSeeder extends Seeder
             'export.run',
             'user.view',
             'dedupe.view',
+            'status.view',
+            'status.create',
+            'status.edit',
+            'status.delete',
         ]);
         
         // Assign agent permissions

@@ -103,6 +103,7 @@ class Lead extends Model
         'epr_abs',
         'epr_amount_funded',
         'epr_payments',
+        'status_id',
     ];
 
     /**
@@ -297,5 +298,13 @@ class Lead extends Model
     public function eco4Calculations(): HasMany
     {
         return $this->hasMany(Eco4Calculation::class);
+    }
+
+    /**
+     * Get the status for this lead.
+     */
+    public function statusModel(): BelongsTo
+    {
+        return $this->belongsTo(Status::class, 'status_id');
     }
 }

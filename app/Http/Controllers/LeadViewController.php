@@ -7,6 +7,7 @@ use App\Enums\LeadStatus;
 use App\Enums\LeadSource;
 use App\Enums\DocumentKind;
 use App\Models\Lead;
+use App\Models\Status;
 use App\Models\Activity;
 use App\Enums\ActivityType;
 use App\Services\GeocodingService;
@@ -27,7 +28,7 @@ class LeadViewController extends Controller
         $query = Lead::query();
 
         if ($request->has('status') && $request->status !== '') {
-            $query->where('status', $request->status);
+            $query->where('status_id', $request->status);
         }
 
         if ($request->has('stage') && $request->stage !== '') {
@@ -49,12 +50,12 @@ class LeadViewController extends Controller
         }
 
         // Get leads with pagination
-        $leads = $query->orderBy('created_at', 'desc')->paginate(10);
+        $leads = $query->with(['agent', 'statusModel'])->orderBy('created_at', 'desc')->paginate(10);
 
         // Get all statuses, stages, and sources for filters
-        $statuses = collect(LeadStatus::cases())->map(fn($status) => [
-            'value' => $status->value,
-            'label' => $status->label(),
+        $statuses = Status::active()->ordered()->get()->map(fn($status) => [
+            'value' => $status->id,
+            'label' => $status->name,
         ]);
 
         $stages = collect(LeadStage::cases())->map(fn($stage) => [
@@ -78,7 +79,7 @@ class LeadViewController extends Controller
     
     public function show($id)
     {
-        $lead = Lead::with(['activities.user', 'activities.documents', 'stageHistories.user', 'documents'])->findOrFail($id);
+        $lead = Lead::with(['activities.user', 'activities.documents', 'stageHistories.user', 'documents', 'statusModel'])->findOrFail($id);
         
         $activityTypes = collect(ActivityType::userSelectable())->map(fn($type) => [
             'value' => $type->value,
@@ -106,9 +107,9 @@ class LeadViewController extends Controller
                 ->with('error', 'You do not have permission to create leads.');
         }
         
-        $statuses = collect(LeadStatus::cases())->map(fn($status) => [
-            'value' => $status->value,
-            'label' => $status->label(),
+        $statuses = Status::active()->ordered()->get()->map(fn($status) => [
+            'value' => $status->id,
+            'label' => $status->name,
         ]);
         
         $stages = collect(LeadStage::cases())->map(fn($stage) => [
@@ -150,7 +151,7 @@ class LeadViewController extends Controller
             'city' => 'nullable|string|max:255',
             'assigned_to' => 'nullable|string|max:50',
             'zip_code' => 'required|string|max:20',
-            'status' => 'required|string',
+            'status_id' => 'required|integer|exists:statuses,id',
             'stage' => 'required|string',
             'source' => 'nullable|string|max:255',
             'source_details' => 'nullable|string',
@@ -268,9 +269,9 @@ class LeadViewController extends Controller
         
         $lead = Lead::findOrFail($id);
         
-        $statuses = collect(LeadStatus::cases())->map(fn($status) => [
-            'value' => $status->value,
-            'label' => $status->label(),
+        $statuses = Status::active()->ordered()->get()->map(fn($status) => [
+            'value' => $status->id,
+            'label' => $status->name,
         ]);
         
         $stages = collect(LeadStage::cases())->map(fn($stage) => [
@@ -315,7 +316,7 @@ class LeadViewController extends Controller
             'city' => 'nullable|string|max:255',
             'assigned_to' => 'nullable|string|max:50',
             'zip_code' => 'required|string|max:20',
-            'status' => 'required|string',
+            'status_id' => 'required|integer|exists:statuses,id',
             'stage' => 'required|string',
             'source' => 'nullable|string|max:255',
             'agent_id' => 'nullable|exists:users,id',

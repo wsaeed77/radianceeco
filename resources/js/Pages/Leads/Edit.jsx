@@ -19,7 +19,7 @@ export default function EditLead({ lead, sources, stages, statuses, agents }) {
         city: lead.city || '',
         assigned_to: lead.assigned_to || '',
         zip_code: lead.zip_code || '',
-        status: lead.status || '',
+        status_id: lead.status_id || '',
         stage: lead.stage || '',
         source: lead.source || '',
         source_details: lead.source_details || '',
@@ -247,9 +247,9 @@ export default function EditLead({ lead, sources, stages, statuses, agents }) {
                                     <div className="grid grid-cols-2 gap-4">
                                         <FormSelect
                                             label="Status"
-                                            value={data.status}
-                                            onChange={(e) => setData('status', e.target.value)}
-                                            error={errors.status}
+                                            value={data.status_id}
+                                            onChange={(e) => setData('status_id', e.target.value)}
+                                            error={errors.status_id}
                                             required
                                         >
                                             <option value="">Select Status</option>

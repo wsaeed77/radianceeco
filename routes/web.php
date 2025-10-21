@@ -118,3 +118,9 @@ Route::middleware('auth')->prefix('import')->group(function () {
     Route::post('/sheets/preview', [ImportController::class, 'previewSheet'])->name('import.sheets.preview');
     Route::post('/leads', [ImportController::class, 'importLeads'])->name('import.leads');
 });
+
+// Status Management routes
+use App\Http\Controllers\StatusController;
+Route::middleware('auth')->group(function () {
+    Route::resource('statuses', StatusController::class);
+});

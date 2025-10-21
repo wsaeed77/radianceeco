@@ -50,5 +50,11 @@ class PermissionSeeder extends Seeder
         // Create permissions for dedupe management
         Permission::create(['name' => 'dedupe.view']);
         Permission::create(['name' => 'dedupe.run']);
+        
+        // Create permissions for status management
+        Permission::create(['name' => 'status.view']);
+        Permission::create(['name' => 'status.create']);
+        Permission::create(['name' => 'status.edit']);
+        Permission::create(['name' => 'status.delete']);
     }
 }

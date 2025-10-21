@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\LeadStage;
 use App\Enums\LeadStatus;
 use App\Models\Lead;
+use App\Models\Status;
 use App\Models\Activity;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -19,12 +20,12 @@ class DashboardController extends Controller
 
     public function index()
     {
-        // Get lead counts by status
-        $statusCounts = Lead::select('status', DB::raw('count(*) as count'))
-            ->groupBy('status')
+        // Get lead counts by status (using dynamic statuses)
+        $statusCounts = Lead::select('status_id', DB::raw('count(*) as count'))
+            ->groupBy('status_id')
             ->get()
             ->mapWithKeys(function ($item) {
-                return [$item->status->value => $item->count];
+                return [$item->status_id => $item->count];
             })
             ->toArray();
         
@@ -40,29 +41,40 @@ class DashboardController extends Controller
         // Get total leads
         $totalLeads = Lead::count();
         
-        // Calculate stats for cards
-        $installedCount = $statusCounts['property_installed'] ?? 0;
-        $holdCount = $statusCounts['hold'] ?? 0;
+        // Get statuses for categorization
+        $statuses = Status::active()->get()->keyBy('id');
         
-        // In Progress: all statuses except hold and property_installed
+        // Calculate stats for cards
+        $installedCount = 0;
+        $holdCount = 0;
         $inProgressCount = 0;
-        foreach ($statusCounts as $status => $count) {
-            if ($status !== 'hold' && $status !== 'property_installed') {
-                $inProgressCount += $count;
+        
+        foreach ($statusCounts as $statusId => $count) {
+            $status = $statuses->get($statusId);
+            if ($status) {
+                if ($status->slug === 'property-installed') {
+                    $installedCount += $count;
+                } elseif ($status->slug === 'hold') {
+                    $holdCount += $count;
+                } else {
+                    $inProgressCount += $count;
+                }
             }
         }
         
         // Get recent leads
         $recentLeads = Lead::latest()->take(5)->get();
         
-        // Get all statuses with counts and percentages
-        $statusesWithCounts = collect(LeadStatus::cases())->map(function ($status) use ($statusCounts, $totalLeads) {
-            $count = $statusCounts[$status->value] ?? 0;
+        // Get all statuses with counts and percentages (using dynamic statuses)
+        $statusesWithCounts = Status::active()->ordered()->get()->map(function ($status) use ($statusCounts, $totalLeads) {
+            $count = $statusCounts[$status->id] ?? 0;
             $percentage = $totalLeads > 0 ? round(($count / $totalLeads) * 100) : 0;
             
             return [
-                'value' => $status->value,
-                'name' => $status->label(),
+                'id' => $status->id,
+                'value' => $status->slug,
+                'name' => $status->name,
+                'color' => $status->color,
                 'count' => $count,
                 'percentage' => $percentage,
             ];

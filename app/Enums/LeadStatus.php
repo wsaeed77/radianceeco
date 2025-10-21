@@ -65,4 +65,26 @@ enum LeadStatus: string
             default => self::UNKNOWN,
         };
     }
+
+    /**
+     * Get all active statuses from the database
+     */
+    public static function getActiveStatuses()
+    {
+        return \App\Models\Status::active()->ordered()->get();
+    }
+
+    /**
+     * Get status options for forms
+     */
+    public static function getOptions()
+    {
+        return self::getActiveStatuses()->map(function ($status) {
+            return [
+                'value' => $status->id,
+                'label' => $status->name,
+                'color' => $status->color,
+            ];
+        });
+    }
 }

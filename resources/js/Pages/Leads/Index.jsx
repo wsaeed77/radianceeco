@@ -200,7 +200,7 @@ export default function LeadsIndex({ leads, statuses, stages, sources, filters }
                                                 )}
                                             </div>
                                         </TableCell>
-                                        <TableCell>{getStatusBadge(lead.status, lead.status_label)}</TableCell>
+                                        <TableCell>{getStatusBadge(lead.status_model?.name || lead.status, lead.status_model?.name || lead.status_label)}</TableCell>
                                         <TableCell>
                                             <div className="flex gap-2">
                                                 <Link href={route('leads.show', lead.id)}>

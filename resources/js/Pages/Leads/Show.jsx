@@ -188,7 +188,7 @@ export default function ShowLead({ lead, activityTypes, documentKinds, epc_certi
                             </div>
                             <div className="grid grid-cols-3 gap-4">
                                 <dt className="font-semibold text-gray-700">Status:</dt>
-                                <dd className="col-span-2">{getStatusBadge(lead.status, lead.status_label)}</dd>
+                                <dd className="col-span-2">{getStatusBadge(lead.status_model?.name || lead.status, lead.status_model?.name || lead.status_label)}</dd>
                             </div>
                             <div className="grid grid-cols-3 gap-4">
                                 <dt className="font-semibold text-gray-700">Team:</dt>
