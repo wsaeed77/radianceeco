@@ -18,6 +18,8 @@ export default function ShowLead({ lead, activityTypes, documentKinds, epc_certi
     const [showEpcSelectionModal, setShowEpcSelectionModal] = useState(false);
     const [epcCertificates, setEpcCertificates] = useState(epc_certificates || []);
     const [epcSearchTerm, setEpcSearchTerm] = useState('');
+    const [selectedDocuments, setSelectedDocuments] = useState([]);
+    const [bulkDeleteMode, setBulkDeleteMode] = useState(false);
     const [expandedFolders, setExpandedFolders] = useState({});
 
     // Check if we have EPC certificates to display in modal
@@ -81,6 +83,43 @@ export default function ShowLead({ lead, activityTypes, documentKinds, epc_certi
                 setEpcCertificates([]);
             }
         });
+    };
+
+    // Bulk delete functions
+    const handleSelectDocument = (documentId) => {
+        setSelectedDocuments(prev => 
+            prev.includes(documentId) 
+                ? prev.filter(id => id !== documentId)
+                : [...prev, documentId]
+        );
+    };
+
+    const handleSelectAllDocuments = (documents) => {
+        if (selectedDocuments.length === documents.length) {
+            setSelectedDocuments([]);
+        } else {
+            setSelectedDocuments(documents.map(doc => doc.id));
+        }
+    };
+
+    const handleBulkDelete = () => {
+        if (selectedDocuments.length === 0) return;
+        
+        if (confirm(`Are you sure you want to delete ${selectedDocuments.length} document(s)?`)) {
+            router.post(route('documents.bulk-delete'), {
+                document_ids: selectedDocuments
+            }, {
+                onSuccess: () => {
+                    setSelectedDocuments([]);
+                    setBulkDeleteMode(false);
+                }
+            });
+        }
+    };
+
+    const toggleBulkDeleteMode = () => {
+        setBulkDeleteMode(!bulkDeleteMode);
+        setSelectedDocuments([]);
     };
     const getStatusBadge = (status, statusLabel, statusColor) => {
         // Use the color from the status model if available, otherwise fallback to default
@@ -1099,13 +1138,24 @@ export default function ShowLead({ lead, activityTypes, documentKinds, epc_certi
                 <CardHeader className="bg-gray-600">
                     <div className="flex items-center justify-between">
                         <CardTitle className="text-white">Documents</CardTitle>
-                        <Button 
-                            variant="secondary" 
-                            size="sm"
-                            onClick={() => setShowDocumentModal(true)}
-                        >
-                            Add Document
-                        </Button>
+                        <div className="flex items-center space-x-2">
+                            {lead.documents && lead.documents.length > 0 && (
+                                <Button 
+                                    variant={bulkDeleteMode ? "danger" : "secondary"}
+                                    size="sm"
+                                    onClick={toggleBulkDeleteMode}
+                                >
+                                    {bulkDeleteMode ? 'Cancel' : 'Bulk Delete'}
+                                </Button>
+                            )}
+                            <Button 
+                                variant="secondary" 
+                                size="sm"
+                                onClick={() => setShowDocumentModal(true)}
+                            >
+                                Add Document
+                            </Button>
+                        </div>
                     </div>
                 </CardHeader>
                 <CardContent className="p-6">
@@ -1150,6 +1200,16 @@ export default function ShowLead({ lead, activityTypes, documentKinds, epc_certi
                                             <table className="min-w-full divide-y divide-gray-200">
                                                 <thead className="bg-gray-50">
                                                     <tr>
+                                                        {bulkDeleteMode && (
+                                                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={selectedDocuments.length === documents.length && documents.length > 0}
+                                                                    onChange={() => handleSelectAllDocuments(documents)}
+                                                                    className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                                                                />
+                                                            </th>
+                                                        )}
                                                         <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
                                                         <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Size</th>
                                                         <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Uploaded</th>
@@ -1158,7 +1218,17 @@ export default function ShowLead({ lead, activityTypes, documentKinds, epc_certi
                                                 </thead>
                                                 <tbody className="bg-white divide-y divide-gray-200">
                                                     {documents.map((document) => (
-                                                        <tr key={document.id} className="hover:bg-gray-50">
+                                                        <tr key={document.id} className={`hover:bg-gray-50 ${selectedDocuments.includes(document.id) ? 'bg-blue-50' : ''}`}>
+                                                            {bulkDeleteMode && (
+                                                                <td className="px-4 py-3 text-sm">
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={selectedDocuments.includes(document.id)}
+                                                                        onChange={() => handleSelectDocument(document.id)}
+                                                                        className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                                                                    />
+                                                                </td>
+                                                            )}
                                                             <td className="px-4 py-3 text-sm text-gray-900">
                                                                 <div className="flex items-center space-x-2">
                                                                     <DocumentTextIcon className="h-4 w-4 text-gray-400" />
@@ -1176,21 +1246,23 @@ export default function ShowLead({ lead, activityTypes, documentKinds, epc_certi
                                                                     <Link href={route('documents.download', document.id)}>
                                                                         <Button variant="primary" size="sm">Download</Button>
                                                                     </Link>
-                                                                    <button
-                                                                        onClick={() => {
-                                                                            if (confirm('Are you sure you want to delete this document?')) {
-                                                                                router.delete(route('documents.destroy', document.id), {
-                                                                                    onSuccess: () => {
-                                                                                        // Document will be removed from the list automatically
-                                                                                    }
-                                                                                });
-                                                                            }
-                                                                        }}
-                                                                        className="p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-full transition-colors duration-200 group"
-                                                                        title="Delete document"
-                                                                    >
-                                                                        <TrashIcon className="h-4 w-4 group-hover:scale-110 transition-transform duration-200" />
-                                                                    </button>
+                                                                    {!bulkDeleteMode && (
+                                                                        <button
+                                                                            onClick={() => {
+                                                                                if (confirm('Are you sure you want to delete this document?')) {
+                                                                                    router.delete(route('documents.destroy', document.id), {
+                                                                                        onSuccess: () => {
+                                                                                            // Document will be removed from the list automatically
+                                                                                        }
+                                                                                    });
+                                                                                }
+                                                                            }}
+                                                                            className="p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-full transition-colors duration-200 group"
+                                                                            title="Delete document"
+                                                                        >
+                                                                            <TrashIcon className="h-4 w-4 group-hover:scale-110 transition-transform duration-200" />
+                                                                        </button>
+                                                                    )}
                                                                 </div>
                                                             </td>
                                                         </tr>
@@ -1201,6 +1273,37 @@ export default function ShowLead({ lead, activityTypes, documentKinds, epc_certi
                                     )}
                                 </div>
                             ))}
+                            
+                            {/* Bulk Delete Controls */}
+                            {bulkDeleteMode && (
+                                <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center space-x-2">
+                                            <span className="text-sm text-red-800">
+                                                {selectedDocuments.length} document{selectedDocuments.length !== 1 ? 's' : ''} selected
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center space-x-2">
+                                            <Button
+                                                variant="secondary"
+                                                size="sm"
+                                                onClick={() => setSelectedDocuments([])}
+                                                disabled={selectedDocuments.length === 0}
+                                            >
+                                                Clear Selection
+                                            </Button>
+                                            <Button
+                                                variant="danger"
+                                                size="sm"
+                                                onClick={handleBulkDelete}
+                                                disabled={selectedDocuments.length === 0}
+                                            >
+                                                Delete Selected ({selectedDocuments.length})
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     ) : (
                         <div className="text-center py-8">
