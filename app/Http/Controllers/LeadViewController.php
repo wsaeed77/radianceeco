@@ -28,7 +28,16 @@ class LeadViewController extends Controller
         $query = Lead::query();
 
         if ($request->has('status') && $request->status !== '') {
-            $query->where('status_id', $request->status);
+            // Handle both status ID (numeric) and status slug (string)
+            if (is_numeric($request->status)) {
+                $query->where('status_id', $request->status);
+            } else {
+                // If it's a slug, find the status by slug and filter by its ID
+                $status = \App\Models\Status::where('slug', $request->status)->first();
+                if ($status) {
+                    $query->where('status_id', $status->id);
+                }
+            }
         }
 
         if ($request->has('stage') && $request->stage !== '') {
