@@ -224,7 +224,7 @@ class DocumentViewController extends Controller
     {
         $validated = $request->validate([
             'document_ids' => 'required|array|min:1',
-            'document_ids.*' => 'required|integer|exists:documents,id',
+            'document_ids.*' => 'required|string|exists:documents,id',
         ]);
 
         $documentIds = $validated['document_ids'];
