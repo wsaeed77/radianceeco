@@ -2,6 +2,7 @@ import { useForm } from '@inertiajs/react';
 import Modal, { ModalHeader, ModalBody, ModalFooter } from './Modal';
 import FormSelect from './FormSelect';
 import Button from './Button';
+import { TrashIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
 export default function AddDocumentModal({ show, onClose, leadId, documentKinds, activityId = null }) {
     const { data, setData, post, processing, errors, reset } = useForm({
@@ -124,9 +125,10 @@ export default function AddDocumentModal({ show, onClose, leadId, documentKinds,
                                             <button
                                                 type="button"
                                                 onClick={() => removeFile(index)}
-                                                className="ml-2 text-red-600 hover:text-red-800 text-sm font-medium"
+                                                className="ml-2 p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-full transition-colors duration-200 group"
+                                                title="Remove file"
                                             >
-                                                Remove
+                                                <TrashIcon className="h-4 w-4 group-hover:scale-110 transition-transform duration-200" />
                                             </button>
                                         </div>
                                     ))}

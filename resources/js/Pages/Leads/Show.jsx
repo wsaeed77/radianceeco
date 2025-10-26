@@ -1017,6 +1017,21 @@ export default function ShowLead({ lead, activityTypes, documentKinds, epc_certi
                                                                                 {(document.size_bytes / 1024).toFixed(2)} KB
                                                                             </p>
                                                                         </div>
+                                                                        <button
+                                                                            onClick={() => {
+                                                                                if (confirm('Are you sure you want to delete this document?')) {
+                                                                                    router.delete(route('documents.destroy', document.id), {
+                                                                                        onSuccess: () => {
+                                                                                            // Document will be removed from the list automatically
+                                                                                        }
+                                                                                    });
+                                                                                }
+                                                                            }}
+                                                                            className="flex-shrink-0 p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-full transition-colors duration-200 group"
+                                                                            title="Delete document"
+                                                                        >
+                                                                            <TrashIcon className="h-4 w-4 group-hover:scale-110 transition-transform duration-200" />
+                                                                        </button>
                                                                     </div>
                                                                 );
                                                             })}
@@ -1157,9 +1172,26 @@ export default function ShowLead({ lead, activityTypes, documentKinds, epc_certi
                                                                 {formatDate(document.created_at)}
                                                             </td>
                                                             <td className="px-4 py-3 text-sm">
-                                                                <Link href={route('documents.download', document.id)}>
-                                                                    <Button variant="primary" size="sm">Download</Button>
-                                                                </Link>
+                                                                <div className="flex items-center space-x-2">
+                                                                    <Link href={route('documents.download', document.id)}>
+                                                                        <Button variant="primary" size="sm">Download</Button>
+                                                                    </Link>
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            if (confirm('Are you sure you want to delete this document?')) {
+                                                                                router.delete(route('documents.destroy', document.id), {
+                                                                                    onSuccess: () => {
+                                                                                        // Document will be removed from the list automatically
+                                                                                    }
+                                                                                });
+                                                                            }
+                                                                        }}
+                                                                        className="p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-full transition-colors duration-200 group"
+                                                                        title="Delete document"
+                                                                    >
+                                                                        <TrashIcon className="h-4 w-4 group-hover:scale-110 transition-transform duration-200" />
+                                                                    </button>
+                                                                </div>
                                                             </td>
                                                         </tr>
                                                     ))}
