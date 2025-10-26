@@ -218,6 +218,57 @@ class DocumentViewController extends Controller
     }
 
     /**
+     * Bulk delete multiple documents.
+     */
+    public function bulkDelete(Request $request)
+    {
+        $validated = $request->validate([
+            'document_ids' => 'required|array|min:1',
+            'document_ids.*' => 'required|integer|exists:documents,id',
+        ]);
+
+        $documentIds = $validated['document_ids'];
+        $deletedCount = 0;
+        $failedDeletions = [];
+
+        foreach ($documentIds as $documentId) {
+            try {
+                $document = Document::findOrFail($documentId);
+                
+                // Check if user can access this document (if agent)
+                if (Auth::user() && Auth::user()->isAgent() && $document->lead->agent_id !== Auth::id()) {
+                    $failedDeletions[] = $document->name;
+                    continue;
+                }
+
+                // Delete the file from storage
+                if ($document->disk === 'public' && $document->path) {
+                    Storage::disk('public')->delete($document->path);
+                }
+
+                // Delete the document record
+                $document->delete();
+                $deletedCount++;
+
+            } catch (\Exception $e) {
+                $failedDeletions[] = $document->name ?? "Document ID: {$documentId}";
+                Log::error("Failed to delete document: " . $e->getMessage(), [
+                    'document_id' => $documentId,
+                    'error' => $e->getMessage()
+                ]);
+            }
+        }
+
+        // Prepare success message
+        $message = "{$deletedCount} document" . ($deletedCount !== 1 ? 's' : '') . " deleted successfully.";
+        if (!empty($failedDeletions)) {
+            $message .= " Failed to delete: " . implode(', ', $failedDeletions);
+        }
+
+        return redirect()->back()->with('success', $message);
+    }
+
+    /**
      * Download a document.
      */
     public function download($id)
