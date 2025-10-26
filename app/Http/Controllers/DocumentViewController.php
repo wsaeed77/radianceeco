@@ -53,7 +53,8 @@ class DocumentViewController extends Controller
             'lead_id' => 'required|string|exists:leads,id',
             'activity_id' => 'nullable|string|exists:activities,id',
             'kind' => 'required|string',
-            'document' => 'required|file|max:10240', // 10MB max
+            'documents' => 'required|array|min:1',
+            'documents.*' => 'required|file|max:10240', // 10MB max per file
         ]);
         
         $lead = Lead::findOrFail($validated['lead_id']);
@@ -73,34 +74,41 @@ class DocumentViewController extends Controller
             return back()->withErrors(['kind' => 'Invalid document type selected.']);
         }
         
-        $file = $request->file('document');
-        $originalName = $file->getClientOriginalName();
-        $fileName = Str::slug(pathinfo($originalName, PATHINFO_FILENAME)) . '-' . Str::random(8) . '.' . $file->getClientOriginalExtension();
+        $files = $request->file('documents');
+        $uploadedDocuments = [];
+        $failedUploads = [];
         
-        // Define the storage path
-        $path = "documents/{$lead->id}/{$kind->value}/{$fileName}";
-        
-        // Store the file locally
-        $stored = Storage::disk('public')->put($path, file_get_contents($file));
-        
-        if (!$stored) {
-            return back()->withErrors(['document' => 'Failed to upload document.']);
+        foreach ($files as $index => $file) {
+            $originalName = $file->getClientOriginalName();
+            $fileName = Str::slug(pathinfo($originalName, PATHINFO_FILENAME)) . '-' . Str::random(8) . '.' . $file->getClientOriginalExtension();
+            
+            // Define the storage path
+            $path = "documents/{$lead->id}/{$kind->value}/{$fileName}";
+            
+            // Store the file locally
+            $stored = Storage::disk('public')->put($path, file_get_contents($file));
+            
+            if (!$stored) {
+                $failedUploads[] = $originalName;
+                continue;
+            }
+            
+            $uploadedDocuments[] = [
+                'file' => $file,
+                'originalName' => $originalName,
+                'fileName' => $fileName,
+                'path' => $path,
+            ];
         }
         
-        // Initialize document data
-        $documentData = [
-            'lead_id' => $lead->id,
-            'activity_id' => $activity ? $activity->id : null,
-            'kind' => $kind->value,
-            'name' => $originalName,
-            'disk' => 'public',
-            'path' => $path,
-            'size_bytes' => $file->getSize(),
-            'uploaded_by' => Auth::id(),
-            'uploaded_at' => now(),
-        ];
+        if (empty($uploadedDocuments)) {
+            return back()->withErrors(['documents' => 'Failed to upload any documents.']);
+        }
         
-        // Upload to Google Drive if enabled
+        $createdDocuments = [];
+        $googleDriveFolderId = null;
+        
+        // Get Google Drive folder ID once for all documents
         if (config('services.google_drive.enabled', false)) {
             try {
                 $googleDriveService = new GoogleDriveService();
@@ -113,23 +121,56 @@ class DocumentViewController extends Controller
                     );
                     
                     // Create/get document type folder
-                    $documentTypeFolderId = $googleDriveService->getOrCreateDocumentTypeFolder(
+                    $googleDriveFolderId = $googleDriveService->getOrCreateDocumentTypeFolder(
                         $leadFolderId,
                         $kind->value
                     );
+                }
+            } catch (\Exception $e) {
+                Log::error("Failed to setup Google Drive folders: " . $e->getMessage(), [
+                    'lead_id' => $lead->id,
+                    'error' => $e->getMessage()
+                ]);
+            }
+        }
+        
+        // Process each uploaded file
+        foreach ($uploadedDocuments as $uploadedDoc) {
+            $file = $uploadedDoc['file'];
+            $originalName = $uploadedDoc['originalName'];
+            $fileName = $uploadedDoc['fileName'];
+            $path = $uploadedDoc['path'];
+            
+            // Initialize document data
+            $documentData = [
+                'lead_id' => $lead->id,
+                'activity_id' => $activity ? $activity->id : null,
+                'kind' => $kind->value,
+                'name' => $originalName,
+                'disk' => 'public',
+                'path' => $path,
+                'size_bytes' => $file->getSize(),
+                'uploaded_by' => Auth::id(),
+                'uploaded_at' => now(),
+            ];
+            
+            // Upload to Google Drive if enabled
+            if ($googleDriveFolderId) {
+                try {
+                    $googleDriveService = new GoogleDriveService();
                     
                     // Upload file to Google Drive
                     $localFilePath = Storage::disk('public')->path($path);
                     $googleDriveFile = $googleDriveService->uploadFile(
                         $localFilePath,
                         $originalName,
-                        $documentTypeFolderId,
+                        $googleDriveFolderId,
                         $file->getMimeType()
                     );
                     
                     // Add Google Drive data
                     $documentData['google_drive_file_id'] = $googleDriveFile['id'];
-                    $documentData['google_drive_folder_id'] = $documentTypeFolderId;
+                    $documentData['google_drive_folder_id'] = $googleDriveFolderId;
                     $documentData['google_drive_web_view_link'] = $googleDriveFile['webViewLink'];
                     $documentData['google_drive_web_content_link'] = $googleDriveFile['webContentLink'] ?? null;
                     
@@ -138,34 +179,42 @@ class DocumentViewController extends Controller
                         'document_name' => $originalName,
                         'google_drive_file_id' => $googleDriveFile['id']
                     ]);
+                } catch (\Exception $e) {
+                    // Log error but continue - local upload still succeeded
+                    Log::error("Failed to upload to Google Drive: " . $e->getMessage(), [
+                        'lead_id' => $lead->id,
+                        'document_name' => $originalName,
+                        'error' => $e->getMessage()
+                    ]);
                 }
-            } catch (\Exception $e) {
-                // Log error but continue - local upload still succeeded
-                Log::error("Failed to upload to Google Drive: " . $e->getMessage(), [
-                    'lead_id' => $lead->id,
-                    'document_name' => $originalName,
-                    'error' => $e->getMessage()
-                ]);
             }
+            
+            // Create document record
+            $document = Document::create($documentData);
+            $createdDocuments[] = $document;
         }
-        
-        // Create document record
-        $document = Document::create($documentData);
         
         // Create activity record if not already tied to an activity
         if (!$activity) {
+            $documentNames = collect($createdDocuments)->pluck('name')->join(', ');
             $activity = Activity::create([
                 'lead_id' => $lead->id,
                 'user_id' => Auth::id(),
                 'type' => ActivityType::FILE_UPLOAD,
-                'description' => 'Uploaded document: ' . $originalName,
-                'message' => 'Document uploaded: ' . $originalName . ' (' . $kind->name . ')',
+                'description' => 'Uploaded documents: ' . $documentNames,
+                'message' => 'Documents uploaded: ' . $documentNames . ' (' . $kind->name . ')',
                 'created_by' => Auth::id(),
             ]);
         }
         
+        // Prepare success message
+        $successMessage = count($createdDocuments) . ' document' . (count($createdDocuments) > 1 ? 's' : '') . ' uploaded successfully.';
+        if (!empty($failedUploads)) {
+            $successMessage .= ' Failed to upload: ' . implode(', ', $failedUploads);
+        }
+        
         return redirect()->route('leads.show', $lead->id)
-            ->with('success', 'Document uploaded successfully.');
+            ->with('success', $successMessage);
     }
 
     /**
