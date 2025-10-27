@@ -218,8 +218,12 @@ class LeadViewController extends Controller
         }
         
         // Set default values for new leads
-        if (empty($validated['status'])) {
-            $validated['status'] = LeadStatus::NEW;
+        if (empty($validated['status_id'])) {
+            // Find the default status ID for 'new' status
+            $defaultStatus = Status::where('slug', 'new')->first();
+            if ($defaultStatus) {
+                $validated['status_id'] = $defaultStatus->id;
+            }
         }
         if (empty($validated['stage'])) {
             $validated['stage'] = LeadStage::RADIANCE_TEAM;
@@ -383,9 +387,9 @@ class LeadViewController extends Controller
         }
         
         // Check if status has changed
-        $statusChanged = $lead->status->value !== $validated['status'];
+        $statusChanged = $lead->status_id !== $validated['status_id'];
         $stageChanged = $lead->stage->value !== $validated['stage'];
-        $oldStatus = $lead->status->label();
+        $oldStatus = $lead->statusModel->name ?? 'Unknown';
         $oldStage = $lead->stage->label();
         
         // Update the lead
@@ -394,7 +398,8 @@ class LeadViewController extends Controller
         // Create an activity log for status change
         if ($statusChanged) {
             // Get the new status name after update
-            $newStatusName = LeadStatus::tryFrom($validated['status'])->label();
+            $newStatus = Status::find($validated['status_id']);
+            $newStatusName = $newStatus ? $newStatus->name : 'Unknown';
             
             Activity::create([
                 'lead_id' => $lead->id,
@@ -411,10 +416,10 @@ class LeadViewController extends Controller
             
             // Create stage history
             $lead->stageHistories()->create([
-                'previous_stage' => $lead->getOriginal('stage'),
-                'new_stage' => $validated['stage'],
-                'user_id' => Auth::id(),
-                'notes' => 'Stage updated through edit form',
+                'from_stage' => $lead->getOriginal('stage'),
+                'to_stage' => $validated['stage'],
+                'changed_by' => Auth::id(),
+                'note' => 'Stage updated through edit form',
             ]);
             
             // Create activity log for stage change
