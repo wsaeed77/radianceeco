@@ -127,7 +127,6 @@ Route::middleware('auth')->group(function () {
 });
 
 // ECO4 Calculation routes
-use App\Http\Controllers\Api\Eco4CalculatorController;
 Route::middleware('auth')->group(function () {
     Route::delete('/eco4/calculations/{calculation}', [Eco4CalculatorController::class, 'delete'])->name('eco4.calculations.delete');
 });
