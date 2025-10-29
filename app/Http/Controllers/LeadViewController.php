@@ -54,7 +54,12 @@ class LeadViewController extends Controller
                 $q->where('first_name', 'like', "%{$search}%")
                   ->orWhere('last_name', 'like', "%{$search}%")
                   ->orWhere('email', 'like', "%{$search}%")
-                  ->orWhere('phone', 'like', "%{$search}%");
+                  ->orWhere('phone', 'like', "%{$search}%")
+                  ->orWhere('postcode', 'like', "%{$search}%")
+                  ->orWhere('zip_code', 'like', "%{$search}%")
+                  ->orWhereHas('agent', function($agentQuery) use ($search) {
+                      $agentQuery->where('name', 'like', "%{$search}%");
+                  });
             });
         }
 
@@ -88,7 +93,7 @@ class LeadViewController extends Controller
     
     public function show($id)
     {
-        $lead = Lead::with(['activities.user', 'activities.documents', 'stageHistories.user', 'documents', 'statusModel'])->findOrFail($id);
+        $lead = Lead::with(['activities.user', 'activities.documents', 'stageHistories.user', 'documents', 'statusModel', 'eco4Calculations.measures'])->findOrFail($id);
         
         $activityTypes = collect(ActivityType::userSelectable())->map(fn($type) => [
             'value' => $type->value,
@@ -167,6 +172,7 @@ class LeadViewController extends Controller
             'notes' => 'nullable|string',
             'agent_id' => 'nullable|exists:users,id',
             'grant_type' => 'nullable|string|max:50',
+            'funders' => 'nullable|string|max:255',
             
             // Eligibility Details
             'occupancy_type' => 'nullable|string|max:255',
@@ -336,6 +342,7 @@ class LeadViewController extends Controller
             'source_details' => 'nullable|string',
             'notes' => 'nullable|string',
             'grant_type' => 'nullable|string|max:50',
+            'funders' => 'nullable|string|max:255',
             
             // Eligibility Details
             'occupancy_type' => 'nullable|string|max:255',

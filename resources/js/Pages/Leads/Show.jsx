@@ -22,6 +22,11 @@ export default function ShowLead({ lead, activityTypes, documentKinds, epc_certi
     const [bulkDeleteMode, setBulkDeleteMode] = useState(false);
     const [expandedFolders, setExpandedFolders] = useState({});
 
+    // Debug logging
+    console.log('Lead data received:', lead);
+    console.log('ECO4 calculations:', lead.eco4_calculations);
+    console.log('ECO4Calculations (camelCase):', lead.eco4Calculations);
+
     // Check if we have EPC certificates to display in modal
     useEffect(() => {
         if (epc_certificates && epc_certificates.length > 0) {
@@ -279,6 +284,10 @@ export default function ShowLead({ lead, activityTypes, documentKinds, epc_certi
                             <div className="grid grid-cols-3 gap-4">
                                 <dt className="font-semibold text-gray-700">Grant Type:</dt>
                                 <dd className="col-span-2 text-gray-900">{lead.grant_type || 'N/A'}</dd>
+                            </div>
+                            <div className="grid grid-cols-3 gap-4">
+                                <dt className="font-semibold text-gray-700">Funders:</dt>
+                                <dd className="col-span-2 text-gray-900">{lead.funders || 'N/A'}</dd>
                             </div>
                             <div className="grid grid-cols-3 gap-4">
                                 <dt className="font-semibold text-gray-700">Is Duplicate:</dt>
@@ -822,6 +831,71 @@ export default function ShowLead({ lead, activityTypes, documentKinds, epc_certi
 
             {/* ECO4/GBIS Calculator */}
             <Eco4CalculatorCard lead={lead} />
+
+            {/* Saved Calculations */}
+            <Card className="mb-6">
+                <CardHeader className="bg-green-600">
+                    <CardTitle className="text-white">📊 Saved Calculations</CardTitle>
+                </CardHeader>
+                <CardContent className="p-6">
+                    {lead.eco4_calculations && lead.eco4_calculations.length > 0 ? (
+                        <div className="space-y-4">
+                            {lead.eco4_calculations.map((calculation, index) => (
+                                <div key={calculation.id} className="border border-gray-200 rounded-lg p-4">
+                                    <div className="flex justify-between items-start mb-3">
+                                        <div>
+                                            <h4 className="font-semibold text-gray-900">
+                                                Calculation #{index + 1}
+                                            </h4>
+                                            <p className="text-sm text-gray-600">
+                                                {calculation.scheme} - {calculation.starting_sap_band} | {calculation.floor_area_band}
+                                            </p>
+                                            <p className="text-xs text-gray-500">
+                                                Saved: {formatDateTime(calculation.created_at)}
+                                            </p>
+                                        </div>
+                                        <div className="text-right">
+                                            <div className="text-lg font-bold text-green-600">
+                                                £{parseFloat(calculation.total_eco_value || 0).toFixed(2)}
+                                            </div>
+                                            <div className="text-sm text-gray-600">
+                                                ABS: {parseFloat(calculation.total_abs || 0).toFixed(2)}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    {calculation.measures && calculation.measures.length > 0 && (
+                                        <div className="mt-3">
+                                            <h5 className="font-medium text-gray-800 mb-2">Measures:</h5>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                                {calculation.measures.map((measure, measureIndex) => (
+                                                    <div key={measureIndex} className="bg-gray-50 p-2 rounded text-sm">
+                                                        <div className="flex justify-between">
+                                                            <span className="font-medium">{measure.measure_type}</span>
+                                                            <span className="text-green-600 font-semibold">
+                                                                £{parseFloat(measure.eco_value || 0).toFixed(2)}
+                                                            </span>
+                                                        </div>
+                                                        <div className="text-xs text-gray-600">
+                                                            ABS: {parseFloat(measure.abs_value || 0).toFixed(2)} | 
+                                                            PPS: {parseFloat(measure.pps_points || 0).toFixed(2)}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="text-center py-8 text-gray-500">
+                            <p>No calculations saved yet.</p>
+                            <p className="text-sm mt-2">Use the calculator above to create and save calculations.</p>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
 
             {/* EPR Section */}
             <Card padding={false} className="mb-6">

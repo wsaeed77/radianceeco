@@ -196,6 +196,8 @@ export default function Eco4CalculatorCard({ lead }) {
             });
             
             alert('Calculation saved successfully!');
+            // Refresh the page to show the saved calculation
+            window.location.reload();
         } catch (err) {
             console.error('Save error:', err);
             alert('Failed to save calculation');

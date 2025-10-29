@@ -95,7 +95,7 @@ export default function LeadsIndex({ leads, statuses, stages, sources, filters }
                             </label>
                             <input
                                 type="text"
-                                placeholder="Name, email, phone..."
+                                placeholder="Name, email, phone, postcode, agent..."
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
                                 onKeyPress={(e) => e.key === 'Enter' && handleFilter()}
@@ -176,6 +176,8 @@ export default function LeadsIndex({ leads, statuses, stages, sources, filters }
                                 <TableRow>
                                     <TableHead>Name</TableHead>
                                     <TableHead>Address</TableHead>
+                                    <TableHead>Postcode</TableHead>
+                                    <TableHead>Agent</TableHead>
                                     <TableHead>Status</TableHead>
                                     <TableHead>Actions</TableHead>
                                 </TableRow>
@@ -200,6 +202,24 @@ export default function LeadsIndex({ leads, statuses, stages, sources, filters }
                                                     </>
                                                 ) : (
                                                     <span className="text-gray-400">No address</span>
+                                                )}
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="text-sm">
+                                                {lead.postcode || lead.zip_code ? (
+                                                    <span className="font-mono">{lead.postcode || lead.zip_code}</span>
+                                                ) : (
+                                                    <span className="text-gray-400">-</span>
+                                                )}
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="text-sm">
+                                                {lead.agent ? (
+                                                    <span>{lead.agent.name}</span>
+                                                ) : (
+                                                    <span className="text-gray-400">Not assigned</span>
                                                 )}
                                             </div>
                                         </TableCell>

@@ -82,6 +82,7 @@ class Lead extends Model
         
         // Lead Status and Source additional fields
         'grant_type',
+        'funders',
         
         // Data Match fields
         'data_match_status',

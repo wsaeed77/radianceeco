@@ -70,7 +70,7 @@
                     <form method="GET" action="{{ route('leads.index') }}" class="mb-4">
                         <div class="row">
                             <div class="col-md-4 mb-2">
-                                <input type="text" name="search" class="form-control" placeholder="Search by name, email or phone" value="{{ request('search') }}">
+                                <input type="text" name="search" class="form-control" placeholder="Search by name, email, phone, postcode, or agent" value="{{ request('search') }}">
                             </div>
                             <div class="col-md-2 mb-2">
                                 <select name="status" class="form-control">
@@ -106,6 +106,8 @@
                                 <tr>
                                     <th>Name</th>
                                     <th>Address</th>
+                                    <th>Postcode</th>
+                                    <th>Agent</th>
                                     <th>Phone</th>
                                     <th>Status</th>
                                     <th>Team</th>
@@ -126,6 +128,16 @@
                                                 @else
                                                     -
                                                 @endif
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="font-monospace">
+                                                {{ $lead->postcode ?: $lead->zip_code ?: '-' }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span>
+                                                {{ $lead->agent ? $lead->agent->name : 'Not assigned' }}
                                             </span>
                                         </td>
                                         <td>{{ $lead->phone }}</td>

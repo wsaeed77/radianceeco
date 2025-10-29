@@ -24,6 +24,7 @@ export default function EditLead({ lead, sources, stages, statuses, agents }) {
         source: lead.source || '',
         source_details: lead.source_details || '',
         grant_type: lead.grant_type || '',
+        funders: lead.funders || '',
         notes: lead.notes || '',
         agent_id: lead.agent_id || '',
         // Data Match fields
@@ -306,6 +307,18 @@ export default function EditLead({ lead, sources, stages, statuses, agents }) {
                                         <option value="">Select Grant Type</option>
                                         <option value="GBIS">GBIS</option>
                                         <option value="ECO4">ECO4</option>
+                                    </FormSelect>
+
+                                    <FormSelect
+                                        label="Funders"
+                                        value={data.funders}
+                                        onChange={(e) => setData('funders', e.target.value)}
+                                        error={errors.funders}
+                                    >
+                                        <option value="">Select Funder</option>
+                                        <option value="Alexander Knight">Alexander Knight</option>
+                                        <option value="VIBRA Energy">VIBRA Energy</option>
+                                        <option value="ANESCO">ANESCO</option>
                                     </FormSelect>
 
                                     <FormTextarea
