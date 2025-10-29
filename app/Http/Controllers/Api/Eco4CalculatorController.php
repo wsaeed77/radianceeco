@@ -153,21 +153,31 @@ class Eco4CalculatorController extends Controller
         try {
             $calculation->delete();
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Calculation deleted successfully',
-            ]);
+            // Check if this is an API request or web request
+            if (request()->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Calculation deleted successfully',
+                ]);
+            }
+
+            // For web requests, redirect back with success message
+            return redirect()->back()->with('success', 'Calculation deleted successfully');
         } catch (\Exception $e) {
             Log::error('ECO4 Delete Error', [
                 'error' => $e->getMessage(),
                 'calculation_id' => $calculation->id,
             ]);
             
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to delete calculation',
-                'error' => $e->getMessage(),
-            ], 500);
+            if (request()->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to delete calculation',
+                    'error' => $e->getMessage(),
+                ], 500);
+            }
+
+            return redirect()->back()->with('error', 'Failed to delete calculation');
         }
     }
 }

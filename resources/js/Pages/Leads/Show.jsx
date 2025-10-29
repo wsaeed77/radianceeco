@@ -122,29 +122,18 @@ export default function ShowLead({ lead, activityTypes, documentKinds, epc_certi
         }
     };
 
-    const handleDeleteCalculation = async (calculationId) => {
+    const handleDeleteCalculation = (calculationId) => {
         if (confirm('Are you sure you want to delete this calculation? This action cannot be undone.')) {
-            try {
-                const response = await fetch(`/api/eco4/calculations/${calculationId}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                    }
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
+            router.delete(`/eco4/calculations/${calculationId}`, {
+                onSuccess: () => {
                     // Refresh the page to show updated calculations
                     window.location.reload();
-                } else {
-                    alert('Failed to delete calculation: ' + (data.message || 'Unknown error'));
+                },
+                onError: (errors) => {
+                    console.error('Error deleting calculation:', errors);
+                    alert('Failed to delete calculation. Please try again.');
                 }
-            } catch (error) {
-                console.error('Error deleting calculation:', error);
-                alert('Failed to delete calculation. Please try again.');
-            }
+            });
         }
     };
 
