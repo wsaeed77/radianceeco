@@ -122,6 +122,32 @@ export default function ShowLead({ lead, activityTypes, documentKinds, epc_certi
         }
     };
 
+    const handleDeleteCalculation = async (calculationId) => {
+        if (confirm('Are you sure you want to delete this calculation? This action cannot be undone.')) {
+            try {
+                const response = await fetch(`/api/eco4/calculations/${calculationId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Refresh the page to show updated calculations
+                    window.location.reload();
+                } else {
+                    alert('Failed to delete calculation: ' + (data.message || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error deleting calculation:', error);
+                alert('Failed to delete calculation. Please try again.');
+            }
+        }
+    };
+
     const toggleBulkDeleteMode = () => {
         setBulkDeleteMode(!bulkDeleteMode);
         setSelectedDocuments([]);
@@ -854,13 +880,22 @@ export default function ShowLead({ lead, activityTypes, documentKinds, epc_certi
                                                 Saved: {formatDateTime(calculation.created_at)}
                                             </p>
                                         </div>
-                                        <div className="text-right">
-                                            <div className="text-lg font-bold text-green-600">
-                                                £{parseFloat(calculation.total_eco_value || 0).toFixed(2)}
+                                        <div className="flex items-center space-x-3">
+                                            <div className="text-right">
+                                                <div className="text-lg font-bold text-green-600">
+                                                    £{parseFloat(calculation.total_eco_value || 0).toFixed(2)}
+                                                </div>
+                                                <div className="text-sm text-gray-600">
+                                                    ABS: {parseFloat(calculation.total_abs || 0).toFixed(2)}
+                                                </div>
                                             </div>
-                                            <div className="text-sm text-gray-600">
-                                                ABS: {parseFloat(calculation.total_abs || 0).toFixed(2)}
-                                            </div>
+                                            <button
+                                                onClick={() => handleDeleteCalculation(calculation.id)}
+                                                className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm font-medium transition-colors"
+                                                title="Delete calculation"
+                                            >
+                                                🗑️ Delete
+                                            </button>
                                         </div>
                                     </div>
                                     
