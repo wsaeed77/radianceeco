@@ -52,6 +52,7 @@ Route::get('/leads/{lead}/documents/create', [DocumentViewController::class, 'cr
 Route::get('/leads/{lead}/activities/{activity}/documents/create', [DocumentViewController::class, 'createForActivity'])->name('documents.create.activity');
 Route::post('/documents', [DocumentViewController::class, 'store'])->name('documents.store');
 Route::get('/documents/{document}/download', [DocumentViewController::class, 'download'])->name('documents.download');
+Route::get('/documents/{document}/view', [DocumentViewController::class, 'view'])->name('documents.view');
 Route::delete('/documents/{document}', [DocumentViewController::class, 'destroy'])->name('documents.destroy');
 Route::post('/documents/bulk-delete', [DocumentViewController::class, 'bulkDelete'])->name('documents.bulk-delete')->middleware('auth');
 

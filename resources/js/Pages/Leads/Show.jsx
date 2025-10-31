@@ -9,7 +9,7 @@ import AddActivityModal from '@/Components/AddActivityModal';
 import AddDocumentModal from '@/Components/AddDocumentModal';
 import QuickAddActivityForm from '@/Components/QuickAddActivityForm';
 import Eco4CalculatorCard from '@/Components/Eco4CalculatorCard';
-import { PencilIcon, DocumentTextIcon, HomeIcon, TrashIcon, FolderIcon, FolderOpenIcon, ChevronRightIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
+import { PencilIcon, DocumentTextIcon, HomeIcon, TrashIcon, FolderIcon, FolderOpenIcon, ChevronRightIcon, ChevronDownIcon, EyeIcon } from '@heroicons/react/24/outline';
 import { formatDate, formatDateTime } from '@/utils';
 
 export default function ShowLead({ lead, activityTypes, documentKinds, epc_certificates }) {
@@ -63,6 +63,15 @@ export default function ShowLead({ lead, activityTypes, documentKinds, epc_certi
             'other': 'Other Documents'
         };
         return labels[kind] || kind.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    };
+
+    // Check if document can be viewed in browser (images or PDFs)
+    const canViewDocument = (document) => {
+        const fileName = document.name.toLowerCase();
+        const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg'];
+        const pdfExtension = '.pdf';
+        
+        return imageExtensions.some(ext => fileName.endsWith(ext)) || fileName.endsWith(pdfExtension);
     };
 
     // Toggle folder expansion
@@ -1124,7 +1133,7 @@ export default function ShowLead({ lead, activityTypes, documentKinds, epc_certi
                                                                     <div key={document.id} className="flex items-start gap-2 p-2 border border-gray-200 rounded-lg hover:bg-gray-50">
                                                                         {isImage && document.storage_path ? (
                                                                             <a 
-                                                                                href={route('documents.download', document.id)}
+                                                                                href={route('documents.view', document.id)}
                                                                                 target="_blank"
                                                                                 rel="noopener noreferrer"
                                                                                 className="flex-shrink-0"
@@ -1144,12 +1153,28 @@ export default function ShowLead({ lead, activityTypes, documentKinds, epc_certi
                                                                             </div>
                                                                         )}
                                                                         <div className="flex-1 min-w-0">
-                                                                            <Link 
-                                                                                href={route('documents.download', document.id)}
-                                                                                className="text-sm font-medium text-primary-600 hover:text-primary-800 hover:underline block truncate"
-                                                                            >
-                                                                                {document.name}
-                                                                            </Link>
+                                                                            <div className="flex items-center gap-2 flex-wrap">
+                                                                                {canViewDocument(document) && (
+                                                                                    <a
+                                                                                        href={route('documents.view', document.id)}
+                                                                                        target="_blank"
+                                                                                        rel="noopener noreferrer"
+                                                                                        className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                                                                                        title="View document"
+                                                                                    >
+                                                                                        <EyeIcon className="h-4 w-4 inline mr-1" />
+                                                                                        View
+                                                                                    </a>
+                                                                                )}
+                                                                                <a 
+                                                                                    href={route('documents.download', document.id)}
+                                                                                    download
+                                                                                    className="text-sm font-medium text-primary-600 hover:text-primary-800 hover:underline"
+                                                                                    title="Download document"
+                                                                                >
+                                                                                    {document.name}
+                                                                                </a>
+                                                                            </div>
                                                                             <p className="text-xs text-gray-500">
                                                                                 {(document.size_bytes / 1024).toFixed(2)} KB
                                                                             </p>
@@ -1341,9 +1366,26 @@ export default function ShowLead({ lead, activityTypes, documentKinds, epc_certi
                                                             </td>
                                                             <td className="px-4 py-3 text-sm">
                                                                 <div className="flex items-center space-x-2">
-                                                                    <Link href={route('documents.download', document.id)}>
-                                                                        <Button variant="primary" size="sm">Download</Button>
-                                                                    </Link>
+                                                                    {canViewDocument(document) && (
+                                                                        <a
+                                                                            href={route('documents.view', document.id)}
+                                                                            target="_blank"
+                                                                            rel="noopener noreferrer"
+                                                                            className="inline-flex items-center px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded transition-colors duration-200"
+                                                                            title="View document"
+                                                                        >
+                                                                            <EyeIcon className="h-4 w-4 mr-1" />
+                                                                            View
+                                                                        </a>
+                                                                    )}
+                                                                    <a
+                                                                        href={route('documents.download', document.id)}
+                                                                        download
+                                                                        className="inline-flex items-center px-3 py-1.5 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded transition-colors duration-200"
+                                                                        title="Download document"
+                                                                    >
+                                                                        Download
+                                                                    </a>
                                                                     {!bulkDeleteMode && (
                                                                         <button
                                                                             onClick={() => {

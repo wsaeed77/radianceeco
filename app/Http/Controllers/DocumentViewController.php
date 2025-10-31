@@ -287,6 +287,37 @@ class DocumentViewController extends Controller
     }
 
     /**
+     * View a document in browser (inline display for images and PDFs).
+     */
+    public function view($id)
+    {
+        $document = Document::findOrFail($id);
+        
+        if (!Storage::disk($document->disk)->exists($document->path)) {
+            return back()->withErrors(['error' => 'Document not found on storage.']);
+        }
+        
+        // For local storage, use response()->file()
+        if ($document->disk === 'public' || $document->disk === 'local') {
+            $filePath = Storage::disk($document->disk)->path($document->path);
+            $mimeType = Storage::disk($document->disk)->mimeType($document->path);
+            
+            return response()->file($filePath, [
+                'Content-Type' => $mimeType,
+                'Content-Disposition' => 'inline; filename="' . $document->name . '"',
+            ]);
+        }
+        
+        // For remote storage (S3, etc.), redirect to a temporary URL
+        $url = Storage::disk($document->disk)->temporaryUrl(
+            $document->path,
+            now()->addMinutes(15)
+        );
+        
+        return redirect($url);
+    }
+
+    /**
      * Delete a document.
      */
     public function destroy($id)
