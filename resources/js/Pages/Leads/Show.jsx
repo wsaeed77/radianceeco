@@ -5,6 +5,9 @@ import PageHeader from '@/Components/PageHeader';
 import Card, { CardHeader, CardTitle, CardContent } from '@/Components/Card';
 import Badge from '@/Components/Badge';
 import Button from '@/Components/Button';
+import FormInput from '@/Components/FormInput';
+import FormSelect from '@/Components/FormSelect';
+import Modal, { ModalHeader, ModalBody, ModalFooter } from '@/Components/Modal';
 import AddActivityModal from '@/Components/AddActivityModal';
 import AddDocumentModal from '@/Components/AddDocumentModal';
 import QuickAddActivityForm from '@/Components/QuickAddActivityForm';
@@ -16,16 +19,42 @@ export default function ShowLead({ lead, activityTypes, documentKinds, epc_certi
     const [showActivityModal, setShowActivityModal] = useState(false);
     const [showDocumentModal, setShowDocumentModal] = useState(false);
     const [showEpcSelectionModal, setShowEpcSelectionModal] = useState(false);
+    const [showExpenseModal, setShowExpenseModal] = useState(false);
     const [epcCertificates, setEpcCertificates] = useState(epc_certificates || []);
     const [epcSearchTerm, setEpcSearchTerm] = useState('');
     const [selectedDocuments, setSelectedDocuments] = useState([]);
     const [bulkDeleteMode, setBulkDeleteMode] = useState(false);
     const [expandedFolders, setExpandedFolders] = useState({});
+    const [eprPayments, setEprPayments] = useState(
+        Array.isArray(lead?.epr_payments) && lead?.epr_payments.length > 0
+            ? lead.epr_payments
+            : []
+    );
+    const [isSavingExpenses, setIsSavingExpenses] = useState(false);
+
+    // Safety check after hooks
+    if (!lead) {
+        return (
+            <AppLayout>
+                <Head title="Lead Not Found" />
+                <div className="p-6">Loading...</div>
+            </AppLayout>
+        );
+    }
 
     // Debug logging
     console.log('Lead data received:', lead);
     console.log('ECO4 calculations:', lead.eco4_calculations);
     console.log('ECO4Calculations (camelCase):', lead.eco4Calculations);
+
+    // Sync expenses with lead data when it updates
+    useEffect(() => {
+        if (lead.epr_payments && Array.isArray(lead.epr_payments)) {
+            setEprPayments(lead.epr_payments);
+        } else if (!lead.epr_payments) {
+            setEprPayments([]);
+        }
+    }, [lead.epr_payments]); // Sync when expenses change
 
     // Check if we have EPC certificates to display in modal
     useEffect(() => {
@@ -95,6 +124,169 @@ export default function ShowLead({ lead, activityTypes, documentKinds, epc_certi
             onSuccess: () => {
                 setShowEpcSelectionModal(false);
                 setEpcCertificates([]);
+            }
+        });
+    };
+
+    // EPR Payment handlers
+    const addEprPayment = () => {
+        console.log('Adding new expense, current count:', eprPayments.length);
+        const newPayment = { type: '', amount: '', quantity: '', rate: '', percentage: '', other_details: '' };
+        const updated = [...eprPayments, newPayment];
+        setEprPayments(updated);
+        console.log('Updated expenses:', updated);
+    };
+
+    const handleOpenExpenseModal = () => {
+        console.log('Opening expense modal...');
+        console.log('Current lead.epr_payments:', lead.epr_payments);
+        // Sync expenses from lead data when opening modal
+        if (lead.epr_payments && Array.isArray(lead.epr_payments)) {
+            setEprPayments(lead.epr_payments);
+            console.log('Synced expenses from lead:', lead.epr_payments);
+        } else {
+            setEprPayments([]);
+            console.log('No expenses found, starting with empty array');
+        }
+        setShowExpenseModal(true);
+        console.log('Modal state set to true');
+    };
+
+    const handleCloseExpenseModal = () => {
+        setShowExpenseModal(false);
+    };
+
+    const removeEprPayment = (index) => {
+        const newPayments = eprPayments.filter((_, i) => i !== index);
+        setEprPayments(newPayments);
+    };
+
+    const updateEprPayment = (index, field, value) => {
+        if (index < 0 || index >= eprPayments.length) return;
+        
+        const newPayments = [...eprPayments];
+        if (!newPayments[index]) {
+            newPayments[index] = { type: '', amount: '', quantity: '', rate: '', percentage: '', other_details: '' };
+        }
+        
+        newPayments[index] = {
+            ...newPayments[index],
+            [field]: value
+        };
+        
+        // Calculate total for TRV/TTZC
+        if (newPayments[index].type === 'TRV/TTZC') {
+            const qty = parseFloat(newPayments[index].quantity || 0) || 0;
+            const rate = parseFloat(newPayments[index].rate || 0) || 0;
+            newPayments[index].amount = (qty * rate).toFixed(2);
+        }
+        
+        // Calculate VAT based on percentage of other expenses
+        if (newPayments[index].type === 'VAT') {
+            const percentage = parseFloat(newPayments[index].percentage || 0) || 0;
+            // Calculate total of all non-VAT expenses
+            const otherExpenses = newPayments
+                .filter((p, i) => i !== index && p && p.type && p.type !== 'VAT' && p.amount)
+                .reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+            newPayments[index].amount = ((otherExpenses * percentage) / 100).toFixed(2);
+        }
+        
+        // For other types, ensure amount is set if it's empty
+        if (newPayments[index].type && newPayments[index].type !== 'TRV/TTZC' && newPayments[index].type !== 'VAT' && !newPayments[index].amount) {
+            newPayments[index].amount = '0';
+        }
+        
+        setEprPayments(newPayments);
+    };
+
+    const saveExpenses = () => {
+        console.log('Saving expenses...');
+        console.log('Current eprPayments:', eprPayments);
+        
+        // Filter out incomplete expenses (no type or no amount)
+        const validPayments = eprPayments.filter(payment => {
+            if (!payment) return false;
+            const hasType = payment.type && payment.type.trim() !== '';
+            
+            if (!hasType) return false;
+            
+            // For VAT and TRV/TTZC, amount is calculated automatically
+            if (payment.type === 'VAT') {
+                // VAT needs percentage to calculate amount
+                return payment.percentage && parseFloat(payment.percentage || 0) > 0;
+            }
+            if (payment.type === 'TRV/TTZC') {
+                // TRV/TTZC needs quantity and rate
+                return payment.quantity && payment.rate && 
+                       parseFloat(payment.quantity || 0) > 0 && 
+                       parseFloat(payment.rate || 0) > 0;
+            }
+            
+            // For "Other" type, need other_details and amount
+            if (payment.type === 'Other') {
+                const hasDetails = payment.other_details && payment.other_details.trim() !== '';
+                const amount = parseFloat(payment.amount || 0);
+                return hasDetails && !isNaN(amount) && amount > 0;
+            }
+            
+            // For other types, need amount
+            const amount = parseFloat(payment.amount || 0);
+            return !isNaN(amount) && amount > 0;
+        });
+
+        console.log('Valid payments:', validPayments);
+
+        if (validPayments.length === 0 && eprPayments.length > 0) {
+            alert('Please complete at least one expense entry (Type and Amount are required).');
+            return;
+        }
+
+        setIsSavingExpenses(true);
+        
+        // Clean up the data structure
+        const cleanedPayments = validPayments.map(payment => ({
+            type: payment.type || '',
+            amount: payment.amount || '0',
+            quantity: payment.quantity || '',
+            rate: payment.rate || '',
+            percentage: payment.percentage || '',
+            other_details: payment.other_details || ''
+        }));
+
+        console.log('Cleaned payments to save:', cleanedPayments);
+        console.log('Saving to route:', route('leads.update', lead.id));
+
+        // Include required fields from lead to pass validation
+        const statusId = lead.status_id || (lead.status_model && lead.status_model.id) || '';
+        const zipCode = lead.zip_code || lead.postcode || '';
+        const stage = lead.stage || '';
+        
+        console.log('Including required fields:', { zip_code: zipCode, status_id: statusId, stage: stage });
+
+        router.put(route('leads.update', lead.id), {
+            epr_payments: cleanedPayments,
+            zip_code: zipCode,
+            status_id: statusId,
+            stage: stage,
+        }, {
+            preserveScroll: true,
+            onStart: () => {
+                console.log('Request started...');
+            },
+            onSuccess: (page) => {
+                console.log('Success! Updated page data:', page);
+                setIsSavingExpenses(false);
+                setShowExpenseModal(false);
+                // The page will automatically refresh with updated lead data via Inertia
+            },
+            onError: (errors) => {
+                console.error('Error saving expenses:', errors);
+                setIsSavingExpenses(false);
+                if (errors.epr_payments) {
+                    alert('Error saving expenses: ' + (Array.isArray(errors.epr_payments) ? errors.epr_payments.join(', ') : errors.epr_payments));
+                } else {
+                    alert('Error saving expenses. Please check the console for details.');
+                }
             }
         });
     };
@@ -1005,7 +1197,12 @@ export default function ShowLead({ lead, activityTypes, documentKinds, epc_certi
 
                         {/* Expenses */}
                         <div className="col-span-2">
-                            <h4 className="text-sm font-semibold text-gray-700 mb-3">Expenses</h4>
+                            <div className="flex items-center justify-between mb-3">
+                                <h4 className="text-sm font-semibold text-gray-700">Expenses</h4>
+                                <Button type="button" variant="secondary" size="sm" onClick={handleOpenExpenseModal}>
+                                    Manage Expenses
+                                </Button>
+                            </div>
                             {lead.epr_payments && lead.epr_payments.length > 0 ? (
                                 <div className="overflow-x-auto">
                                     <table className="min-w-full divide-y divide-gray-200">
@@ -1020,12 +1217,19 @@ export default function ShowLead({ lead, activityTypes, documentKinds, epc_certi
                                         <tbody className="bg-white divide-y divide-gray-200">
                                             {lead.epr_payments.map((payment, index) => (
                                                 <tr key={index} className="hover:bg-gray-50">
-                                                    <td className="px-4 py-3 text-sm text-gray-900">{payment.type}</td>
+                                                    <td className="px-4 py-3 text-sm text-gray-900">
+                                                        {payment.type}
+                                                        {payment.type === 'Other' && payment.other_details && (
+                                                            <div className="text-xs text-gray-500 mt-1">
+                                                                ({payment.other_details})
+                                                            </div>
+                                                        )}
+                                                    </td>
                                                     <td className="px-4 py-3 text-sm text-gray-900">
                                                         {payment.type === 'TRV/TTZC' ? payment.quantity : payment.type === 'VAT' ? '-' : '-'}
                                                     </td>
                                                     <td className="px-4 py-3 text-sm text-gray-900">
-                                                        {payment.type === 'TRV/TTZC' ? `£${parseFloat(payment.rate).toFixed(2)}` : payment.type === 'VAT' ? `${payment.percentage}%` : '-'}
+                                                        {payment.type === 'TRV/TTZC' ? `£${parseFloat(payment.rate || 0).toFixed(2)}` : payment.type === 'VAT' ? `${payment.percentage || 0}%` : '-'}
                                                     </td>
                                                     <td className="px-4 py-3 text-sm text-gray-900 text-right font-semibold">
                                                         £{parseFloat(payment.amount || 0).toFixed(2)}
@@ -1471,6 +1675,205 @@ export default function ShowLead({ lead, activityTypes, documentKinds, epc_certi
                 leadId={lead.id}
                 documentKinds={documentKinds}
             />
+
+            {/* Expense Modal */}
+            <Modal show={showExpenseModal} onClose={handleCloseExpenseModal} maxWidth="4xl">
+                <ModalHeader>Manage Expenses</ModalHeader>
+                <ModalBody>
+                    <div className="space-y-4">
+                        {eprPayments.length > 0 ? (
+                            <>
+                                {eprPayments.map((payment, index) => {
+                                    const safePayment = {
+                                        type: payment?.type || '',
+                                        amount: payment?.amount || '',
+                                        quantity: payment?.quantity || '',
+                                        rate: payment?.rate || '',
+                                        percentage: payment?.percentage || '',
+                                        other_details: payment?.other_details || ''
+                                    };
+                                    return (
+                                        <div key={index} className="p-4 border border-gray-200 rounded-lg bg-gray-50">
+                                            <div className="grid grid-cols-12 gap-3">
+                                                <div className="col-span-11">
+                                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                                                        <FormSelect
+                                                            label="Payment Type"
+                                                            value={safePayment.type}
+                                                            onChange={(e) => updateEprPayment(index, 'type', e.target.value)}
+                                                        >
+                                                            <option value="">Select Type</option>
+                                                            <option value="Early Fee">Early Fee</option>
+                                                            <option value="C3">C3</option>
+                                                            <option value="Gas Engineer">Gas Engineer</option>
+                                                            <option value="Remedial">Remedial</option>
+                                                            <option value="Loft Material">Loft Material</option>
+                                                            <option value="Loft Labour">Loft Labour</option>
+                                                            <option value="Extractor Fan">Extractor Fan</option>
+                                                            <option value="Trickle Vents">Trickle Vents</option>
+                                                            <option value="Boiler Material">Boiler Material</option>
+                                                            <option value="ESI">ESI</option>
+                                                            <option value="Secondary Heating">Secondary Heating</option>
+                                                            <option value="Data Match">Data Match</option>
+                                                            <option value="Coordination">Coordination</option>
+                                                            <option value="GDGC">GDGC</option>
+                                                            <option value="Land Registry">Land Registry</option>
+                                                            <option value="Administrative Charges">Administrative Charges</option>
+                                                            <option value="Surveyor">Surveyor</option>
+                                                            <option value="Misc">Misc</option>
+                                                            <option value="TRV/TTZC">TRV/TTZC</option>
+                                                            <option value="VAT">VAT</option>
+                                                            <option value="IBG">IBG</option>
+                                                            <option value="Other">Other</option>
+                                                        </FormSelect>
+
+                                                        {safePayment.type === 'VAT' ? (
+                                                            <>
+                                                                <FormInput
+                                                                    label="Percentage (%)"
+                                                                    type="number"
+                                                                    step="0.01"
+                                                                    value={safePayment.percentage}
+                                                                    onChange={(e) => updateEprPayment(index, 'percentage', e.target.value)}
+                                                                    placeholder="20"
+                                                                />
+                                                                <div className="col-span-2">
+                                                                    <FormInput
+                                                                        label="VAT Amount"
+                                                                        type="number"
+                                                                        value={safePayment.amount}
+                                                                        disabled
+                                                                        className="bg-gray-100"
+                                                                    />
+                                                                </div>
+                                                            </>
+                                                        ) : safePayment.type === 'TRV/TTZC' ? (
+                                                            <>
+                                                                <FormInput
+                                                                    label="Quantity"
+                                                                    type="number"
+                                                                    value={safePayment.quantity}
+                                                                    onChange={(e) => updateEprPayment(index, 'quantity', e.target.value)}
+                                                                    placeholder="0"
+                                                                />
+                                                                <FormInput
+                                                                    label="Rate"
+                                                                    type="number"
+                                                                    step="0.01"
+                                                                    value={safePayment.rate}
+                                                                    onChange={(e) => updateEprPayment(index, 'rate', e.target.value)}
+                                                                    placeholder="0.00"
+                                                                />
+                                                                <FormInput
+                                                                    label="Total"
+                                                                    type="number"
+                                                                    value={safePayment.amount}
+                                                                    disabled
+                                                                    className="bg-gray-100"
+                                                                />
+                                                            </>
+                                                        ) : safePayment.type === 'Other' ? (
+                                                            <>
+                                                                <div className="col-span-2">
+                                                                    <FormInput
+                                                                        label="Other Details"
+                                                                        type="text"
+                                                                        value={safePayment.other_details}
+                                                                        onChange={(e) => updateEprPayment(index, 'other_details', e.target.value)}
+                                                                        placeholder="Enter expense details"
+                                                                    />
+                                                                </div>
+                                                                <div className="col-span-1">
+                                                                    <FormInput
+                                                                        label="Amount"
+                                                                        type="number"
+                                                                        step="0.01"
+                                                                        value={safePayment.amount}
+                                                                        onChange={(e) => updateEprPayment(index, 'amount', e.target.value)}
+                                                                        placeholder="0.00"
+                                                                    />
+                                                                </div>
+                                                            </>
+                                                        ) : (
+                                                            <div className="col-span-3">
+                                                                <FormInput
+                                                                    label="Amount"
+                                                                    type="number"
+                                                                    step="0.01"
+                                                                    value={safePayment.amount}
+                                                                    onChange={(e) => updateEprPayment(index, 'amount', e.target.value)}
+                                                                    placeholder="0.00"
+                                                                />
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <div className="col-span-1 flex items-end">
+                                                    <Button
+                                                        type="button"
+                                                        variant="danger"
+                                                        size="sm"
+                                                        onClick={() => removeEprPayment(index)}
+                                                    >
+                                                        ×
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                                <div className="pt-2 border-t border-gray-200">
+                                    <div className="flex justify-between items-center">
+                                        <div>
+                                            <p className="text-sm font-semibold text-gray-700">Total Expenses:</p>
+                                            <p className="text-lg font-bold text-gray-900">
+                                                £{eprPayments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0).toFixed(2)}
+                                            </p>
+                                        </div>
+                                        <Button
+                                            type="button"
+                                            variant="secondary"
+                                            size="sm"
+                                            onClick={addEprPayment}
+                                        >
+                                            Add Another Expense
+                                        </Button>
+                                    </div>
+                                </div>
+                            </>
+                        ) : (
+                            <div className="text-center py-8">
+                                <p className="text-sm text-gray-500 italic mb-4">No expenses added yet.</p>
+                                <Button
+                                    type="button"
+                                    variant="primary"
+                                    size="sm"
+                                    onClick={addEprPayment}
+                                >
+                                    Add First Expense
+                                </Button>
+                            </div>
+                        )}
+                    </div>
+                </ModalBody>
+                <ModalFooter>
+                    <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={handleCloseExpenseModal}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        type="button"
+                        variant="primary"
+                        onClick={saveExpenses}
+                        disabled={isSavingExpenses}
+                    >
+                        {isSavingExpenses ? 'Saving...' : 'Save Expenses'}
+                    </Button>
+                </ModalFooter>
+            </Modal>
 
             {/* EPC Certificate Selection Modal */}
             {showEpcSelectionModal && (
