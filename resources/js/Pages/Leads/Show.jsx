@@ -402,11 +402,11 @@ export default function ShowLead({ lead, activityTypes, documentKinds, epc_certi
             return;
         }
 
-        // Validate line items
+        // Validate line items (allow negative prices for credits/adjustments)
         const validLineItems = invoiceData.line_items.filter(item => 
             item.details && item.details.trim() !== '' && 
-            item.qty && parseFloat(item.qty) > 0 && 
-            item.price && parseFloat(item.price) >= 0
+            item.qty && parseFloat(item.qty) !== 0 && 
+            item.price !== '' && item.price !== null && !isNaN(parseFloat(item.price))
         );
 
         if (validLineItems.length === 0) {
@@ -2296,6 +2296,7 @@ export default function ShowLead({ lead, activityTypes, documentKinds, epc_certi
                                                     onChange={(e) => updateInvoiceLineItem(index, 'price', e.target.value)}
                                                     placeholder="0.00"
                                                     required
+                                                    // Allow negative values for credits/adjustments
                                                 />
                                             </div>
                                             <div className="col-span-2">
