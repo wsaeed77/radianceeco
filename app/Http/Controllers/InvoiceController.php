@@ -7,7 +7,6 @@ use App\Models\Invoice;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
-use Barryvdh\DomPDF\Facade\Pdf;
 
 class InvoiceController extends Controller
 {
@@ -84,8 +83,9 @@ class InvoiceController extends Controller
         // Load relationships
         $invoice->load('lead', 'creator');
 
-        // Generate PDF using the facade
-        $pdf = Pdf::loadView('invoices.pdf', compact('invoice'));
+        // Generate PDF using the service container (more reliable than facade)
+        $pdf = app('dompdf.wrapper');
+        $pdf->loadView('invoices.pdf', compact('invoice'));
 
         // Set filename
         $filename = 'Invoice_' . $invoice->invoice_no . '_' . $invoice->invoice_date->format('Y-m-d') . '.pdf';
