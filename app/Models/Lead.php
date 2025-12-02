@@ -308,4 +308,12 @@ class Lead extends Model
     {
         return $this->belongsTo(Status::class, 'status_id');
     }
+
+    /**
+     * Get the invoices for this lead.
+     */
+    public function invoices(): HasMany
+    {
+        return $this->hasMany(Invoice::class);
+    }
 }

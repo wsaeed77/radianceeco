@@ -15,4 +15,16 @@ export default defineConfig({
             '@': '/resources/js',
         },
     },
+    server: {
+        host: '0.0.0.0',
+        port: 5173,
+        strictPort: true,
+        hmr: {
+            host: 'radiance.local',
+            port: 5173,
+            protocol: 'http',
+        },
+        cors: true,
+        origin: 'http://radiance.local:5173',
+    },
 });

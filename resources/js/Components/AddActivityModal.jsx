@@ -1,4 +1,5 @@
-import { useForm } from '@inertiajs/react';
+import { useForm, router } from '@inertiajs/react';
+import { useState } from 'react';
 import Modal, { ModalHeader, ModalBody, ModalFooter } from './Modal';
 import FormSelect from './FormSelect';
 import FormInput from './FormInput';
@@ -6,7 +7,8 @@ import FormTextarea from './FormTextarea';
 import Button from './Button';
 
 export default function AddActivityModal({ show, onClose, leadId, activityTypes, documentKinds }) {
-    const { data, setData, post, processing, errors, reset } = useForm({
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const { data, setData, errors, reset } = useForm({
         lead_id: leadId,
         type: '',
         description: '',
@@ -17,10 +19,51 @@ export default function AddActivityModal({ show, onClose, leadId, activityTypes,
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        post(route('activities.store'), {
+        setIsSubmitting(true);
+        
+        // Prepare form data - only include document_kind if document is present
+        const formData = {
+            lead_id: data.lead_id,
+            type: data.type,
+            description: data.description,
+            message: data.message || null,
+        };
+        
+        // Only include document and document_kind if a document is uploaded
+        if (data.document) {
+            formData.document = data.document;
+            if (data.document_kind) {
+                formData.document_kind = data.document_kind;
+            }
+        }
+        
+        // Submit with transformed data using router directly
+        const formDataToSend = new FormData();
+        formDataToSend.append('lead_id', formData.lead_id);
+        formDataToSend.append('type', formData.type);
+        formDataToSend.append('description', formData.description);
+        if (formData.message) {
+            formDataToSend.append('message', formData.message);
+        }
+        if (formData.document) {
+            formDataToSend.append('document', formData.document);
+            if (formData.document_kind) {
+                formDataToSend.append('document_kind', formData.document_kind);
+            }
+        }
+        
+        router.post(route('activities.store'), formDataToSend, {
             onSuccess: () => {
+                setIsSubmitting(false);
                 reset();
                 onClose();
+            },
+            onError: () => {
+                setIsSubmitting(false);
+                // Errors will be available in the errors prop
+            },
+            onFinish: () => {
+                setIsSubmitting(false);
             },
         });
     };
@@ -133,16 +176,16 @@ export default function AddActivityModal({ show, onClose, leadId, activityTypes,
                         type="button"
                         variant="secondary"
                         onClick={handleClose}
-                        disabled={processing}
+                        disabled={isSubmitting}
                     >
                         Cancel
                     </Button>
                     <Button
                         type="submit"
                         variant="success"
-                        disabled={processing}
+                        disabled={isSubmitting}
                     >
-                        {processing ? 'Saving...' : 'Save Activity'}
+                        {isSubmitting ? 'Saving...' : 'Save Activity'}
                     </Button>
                 </ModalFooter>
             </form>

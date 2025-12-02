@@ -93,7 +93,7 @@ class LeadViewController extends Controller
     
     public function show($id)
     {
-        $lead = Lead::with(['activities.user', 'activities.documents', 'stageHistories.user', 'documents', 'statusModel', 'eco4Calculations.measures'])->findOrFail($id);
+        $lead = Lead::with(['activities.user', 'activities.documents', 'stageHistories.user', 'documents', 'statusModel', 'eco4Calculations.measures', 'invoices.creator'])->findOrFail($id);
         
         $activityTypes = collect(ActivityType::userSelectable())->map(fn($type) => [
             'value' => $type->value,

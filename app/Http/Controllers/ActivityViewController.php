@@ -71,7 +71,7 @@ class ActivityViewController extends Controller
             'description' => 'required|string|max:255',
             'message' => 'nullable|string',
             'document' => 'nullable|file|max:10240',
-            'document_kind' => 'required_with:document|string',
+            'document_kind' => 'nullable|required_with:document|string',
         ]);
         
         $lead = Lead::findOrFail($validated['lead_id']);

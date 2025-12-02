@@ -131,3 +131,10 @@ Route::middleware('auth')->group(function () {
 Route::middleware('auth')->group(function () {
     Route::delete('/eco4/calculations/{calculation}', [Eco4CalculatorController::class, 'delete'])->name('eco4.calculations.delete');
 });
+
+// Invoice routes
+use App\Http\Controllers\InvoiceController;
+Route::middleware('auth')->group(function () {
+    Route::post('/leads/{lead}/invoices', [InvoiceController::class, 'store'])->name('invoices.store');
+    Route::get('/invoices/{invoice}/download', [InvoiceController::class, 'download'])->name('invoices.download');
+});

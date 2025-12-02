@@ -7,12 +7,13 @@ import Badge from '@/Components/Badge';
 import Button from '@/Components/Button';
 import FormInput from '@/Components/FormInput';
 import FormSelect from '@/Components/FormSelect';
+import FormTextarea from '@/Components/FormTextarea';
 import Modal, { ModalHeader, ModalBody, ModalFooter } from '@/Components/Modal';
 import AddActivityModal from '@/Components/AddActivityModal';
 import AddDocumentModal from '@/Components/AddDocumentModal';
 import QuickAddActivityForm from '@/Components/QuickAddActivityForm';
 import Eco4CalculatorCard from '@/Components/Eco4CalculatorCard';
-import { PencilIcon, DocumentTextIcon, HomeIcon, TrashIcon, FolderIcon, FolderOpenIcon, ChevronRightIcon, ChevronDownIcon, EyeIcon } from '@heroicons/react/24/outline';
+import { PencilIcon, DocumentTextIcon, HomeIcon, TrashIcon, FolderIcon, FolderOpenIcon, ChevronRightIcon, ChevronDownIcon, EyeIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 import { formatDate, formatDateTime } from '@/utils';
 
 export default function ShowLead({ lead, activityTypes, documentKinds, epc_certificates }) {
@@ -20,6 +21,7 @@ export default function ShowLead({ lead, activityTypes, documentKinds, epc_certi
     const [showDocumentModal, setShowDocumentModal] = useState(false);
     const [showEpcSelectionModal, setShowEpcSelectionModal] = useState(false);
     const [showExpenseModal, setShowExpenseModal] = useState(false);
+    const [showInvoiceModal, setShowInvoiceModal] = useState(false);
     const [epcCertificates, setEpcCertificates] = useState(epc_certificates || []);
     const [epcSearchTerm, setEpcSearchTerm] = useState('');
     const [selectedDocuments, setSelectedDocuments] = useState([]);
@@ -31,6 +33,18 @@ export default function ShowLead({ lead, activityTypes, documentKinds, epc_certi
             : []
     );
     const [isSavingExpenses, setIsSavingExpenses] = useState(false);
+    const [invoiceData, setInvoiceData] = useState({
+        buyer_name: '',
+        buyer_address: '',
+        invoice_date: new Date().toISOString().split('T')[0],
+        invoice_no: '',
+        order_no: '',
+        submission_no: '',
+        po_no: '',
+        due_date: new Date().toISOString().split('T')[0],
+        line_items: [{ details: '', qty: '', price: '', total: '' }]
+    });
+    const [isSavingInvoice, setIsSavingInvoice] = useState(false);
 
     // Safety check after hooks
     if (!lead) {
@@ -50,7 +64,17 @@ export default function ShowLead({ lead, activityTypes, documentKinds, epc_certi
     // Sync expenses with lead data when it updates
     useEffect(() => {
         if (lead.epr_payments && Array.isArray(lead.epr_payments)) {
-            setEprPayments(lead.epr_payments);
+            // Migrate old expense types when syncing
+            const migratedPayments = lead.epr_payments.map(payment => {
+                if (payment && payment.type === 'TRV/TTZC') {
+                    return { ...payment, type: 'Gas Engineer' };
+                }
+                if (payment && payment.type === 'Extractor Fan') {
+                    return { ...payment, type: 'Loft Material' };
+                }
+                return payment;
+            });
+            setEprPayments(migratedPayments);
         } else if (!lead.epr_payments) {
             setEprPayments([]);
         }
@@ -142,8 +166,18 @@ export default function ShowLead({ lead, activityTypes, documentKinds, epc_certi
         console.log('Current lead.epr_payments:', lead.epr_payments);
         // Sync expenses from lead data when opening modal
         if (lead.epr_payments && Array.isArray(lead.epr_payments)) {
-            setEprPayments(lead.epr_payments);
-            console.log('Synced expenses from lead:', lead.epr_payments);
+            // Migrate old expense types
+            const migratedPayments = lead.epr_payments.map(payment => {
+                if (payment.type === 'TRV/TTZC') {
+                    return { ...payment, type: 'Gas Engineer' };
+                }
+                if (payment.type === 'Extractor Fan') {
+                    return { ...payment, type: 'Loft Material' };
+                }
+                return payment;
+            });
+            setEprPayments(migratedPayments);
+            console.log('Synced expenses from lead:', migratedPayments);
         } else {
             setEprPayments([]);
             console.log('No expenses found, starting with empty array');
@@ -174,11 +208,12 @@ export default function ShowLead({ lead, activityTypes, documentKinds, epc_certi
             [field]: value
         };
         
-        // Calculate total for TRV/TTZC
-        if (newPayments[index].type === 'TRV/TTZC') {
+        // Calculate total for Airbox (quantity * fixed rate £12.50)
+        if (newPayments[index].type === 'Airbox') {
             const qty = parseFloat(newPayments[index].quantity || 0) || 0;
-            const rate = parseFloat(newPayments[index].rate || 0) || 0;
-            newPayments[index].amount = (qty * rate).toFixed(2);
+            const fixedRate = 12.50;
+            newPayments[index].rate = fixedRate.toFixed(2);
+            newPayments[index].amount = (qty * fixedRate).toFixed(2);
         }
         
         // Calculate VAT based on percentage of other expenses
@@ -192,7 +227,7 @@ export default function ShowLead({ lead, activityTypes, documentKinds, epc_certi
         }
         
         // For other types, ensure amount is set if it's empty
-        if (newPayments[index].type && newPayments[index].type !== 'TRV/TTZC' && newPayments[index].type !== 'VAT' && !newPayments[index].amount) {
+        if (newPayments[index].type && newPayments[index].type !== 'Airbox' && newPayments[index].type !== 'VAT' && !newPayments[index].amount) {
             newPayments[index].amount = '0';
         }
         
@@ -210,20 +245,26 @@ export default function ShowLead({ lead, activityTypes, documentKinds, epc_certi
             
             if (!hasType) return false;
             
-            // For VAT and TRV/TTZC, amount is calculated automatically
+            // For VAT, amount is calculated automatically
             if (payment.type === 'VAT') {
                 // VAT needs percentage to calculate amount
                 return payment.percentage && parseFloat(payment.percentage || 0) > 0;
             }
-            if (payment.type === 'TRV/TTZC') {
-                // TRV/TTZC needs quantity and rate
-                return payment.quantity && payment.rate && 
-                       parseFloat(payment.quantity || 0) > 0 && 
-                       parseFloat(payment.rate || 0) > 0;
+            
+            // For Airbox, amount is calculated automatically from quantity
+            if (payment.type === 'Airbox') {
+                return payment.quantity && parseFloat(payment.quantity || 0) > 0;
             }
             
-            // For "Other" type, need other_details and amount
-            if (payment.type === 'Other') {
+            // For DMEV, need quantity and amount
+            if (payment.type === 'DMEV') {
+                const hasQuantity = payment.quantity && parseFloat(payment.quantity || 0) > 0;
+                const amount = parseFloat(payment.amount || 0);
+                return hasQuantity && !isNaN(amount) && amount > 0;
+            }
+            
+            // For "Remedial" and "Other" types, need description and amount
+            if (payment.type === 'Remedial' || payment.type === 'Other') {
                 const hasDetails = payment.other_details && payment.other_details.trim() !== '';
                 const amount = parseFloat(payment.amount || 0);
                 return hasDetails && !isNaN(amount) && amount > 0;
@@ -287,6 +328,125 @@ export default function ShowLead({ lead, activityTypes, documentKinds, epc_certi
                 } else {
                     alert('Error saving expenses. Please check the console for details.');
                 }
+            }
+        });
+    };
+
+    // Invoice handlers
+    const handleOpenInvoiceModal = () => {
+        setInvoiceData({
+            buyer_name: '',
+            buyer_address: '',
+            invoice_date: new Date().toISOString().split('T')[0],
+            invoice_no: '',
+            order_no: '',
+            submission_no: '',
+            po_no: '',
+            due_date: new Date().toISOString().split('T')[0],
+            line_items: [{ details: '', qty: '', price: '', total: '' }]
+        });
+        setShowInvoiceModal(true);
+    };
+
+    const handleCloseInvoiceModal = () => {
+        setShowInvoiceModal(false);
+    };
+
+    const addInvoiceLineItem = () => {
+        setInvoiceData(prev => ({
+            ...prev,
+            line_items: [...prev.line_items, { details: '', qty: '', price: '', total: '' }]
+        }));
+    };
+
+    const removeInvoiceLineItem = (index) => {
+        setInvoiceData(prev => ({
+            ...prev,
+            line_items: prev.line_items.filter((_, i) => i !== index)
+        }));
+    };
+
+    const updateInvoiceLineItem = (index, field, value) => {
+        setInvoiceData(prev => {
+            const newLineItems = [...prev.line_items];
+            newLineItems[index] = {
+                ...newLineItems[index],
+                [field]: value
+            };
+            
+            // Calculate total if qty and price are provided
+            if (field === 'qty' || field === 'price') {
+                const qty = parseFloat(newLineItems[index].qty || 0);
+                const price = parseFloat(newLineItems[index].price || 0);
+                newLineItems[index].total = (qty * price).toFixed(2);
+            }
+            
+            return {
+                ...prev,
+                line_items: newLineItems
+            };
+        });
+    };
+
+    const updateInvoiceField = (field, value) => {
+        setInvoiceData(prev => ({
+            ...prev,
+            [field]: value
+        }));
+    };
+
+    const saveInvoice = () => {
+        // Validate required fields
+        if (!invoiceData.buyer_name || !invoiceData.buyer_address || !invoiceData.invoice_date || !invoiceData.invoice_no) {
+            alert('Please fill in Buyer Name, Buyer Address, Invoice Date and Invoice No.');
+            return;
+        }
+
+        // Validate line items
+        const validLineItems = invoiceData.line_items.filter(item => 
+            item.details && item.details.trim() !== '' && 
+            item.qty && parseFloat(item.qty) > 0 && 
+            item.price && parseFloat(item.price) >= 0
+        );
+
+        if (validLineItems.length === 0) {
+            alert('Please add at least one valid line item.');
+            return;
+        }
+
+        setIsSavingInvoice(true);
+
+        // Format line items for submission
+        const formattedLineItems = validLineItems.map(item => ({
+            details: item.details.trim(),
+            qty: parseFloat(item.qty),
+            price: parseFloat(item.price),
+            total: parseFloat(item.total || (parseFloat(item.qty) * parseFloat(item.price)).toFixed(2))
+        }));
+
+        // Use route helper, fallback to direct URL if route not available
+        let invoiceRoute;
+        try {
+            invoiceRoute = route('invoices.store', lead.id);
+        } catch (error) {
+            // Fallback to direct URL if Ziggy route not available
+            console.warn('Route helper not available, using direct URL');
+            invoiceRoute = `/leads/${lead.id}/invoices`;
+        }
+
+        router.post(invoiceRoute, {
+            ...invoiceData,
+            line_items: formattedLineItems
+        }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setIsSavingInvoice(false);
+                setShowInvoiceModal(false);
+            },
+            onError: (errors) => {
+                setIsSavingInvoice(false);
+                console.error('Error saving invoice:', errors);
+                alert('Error saving invoice. Please check the console for details.');
             }
         });
     };
@@ -1219,17 +1379,17 @@ export default function ShowLead({ lead, activityTypes, documentKinds, epc_certi
                                                 <tr key={index} className="hover:bg-gray-50">
                                                     <td className="px-4 py-3 text-sm text-gray-900">
                                                         {payment.type}
-                                                        {payment.type === 'Other' && payment.other_details && (
+                                                        {(payment.type === 'Other' || payment.type === 'Remedial') && payment.other_details && (
                                                             <div className="text-xs text-gray-500 mt-1">
                                                                 ({payment.other_details})
                                                             </div>
                                                         )}
                                                     </td>
                                                     <td className="px-4 py-3 text-sm text-gray-900">
-                                                        {payment.type === 'TRV/TTZC' ? payment.quantity : payment.type === 'VAT' ? '-' : '-'}
+                                                        {payment.type === 'Airbox' || payment.type === 'DMEV' ? payment.quantity : payment.type === 'VAT' ? '-' : '-'}
                                                     </td>
                                                     <td className="px-4 py-3 text-sm text-gray-900">
-                                                        {payment.type === 'TRV/TTZC' ? `£${parseFloat(payment.rate || 0).toFixed(2)}` : payment.type === 'VAT' ? `${payment.percentage || 0}%` : '-'}
+                                                        {payment.type === 'Airbox' ? `£${parseFloat(payment.rate || 12.50).toFixed(2)}` : payment.type === 'VAT' ? `${payment.percentage || 0}%` : '-'}
                                                     </td>
                                                     <td className="px-4 py-3 text-sm text-gray-900 text-right font-semibold">
                                                         £{parseFloat(payment.amount || 0).toFixed(2)}
@@ -1270,6 +1430,71 @@ export default function ShowLead({ lead, activityTypes, documentKinds, epc_certi
                             </div>
                         )}
                     </div>
+                </CardContent>
+            </Card>
+
+            {/* Invoices Section */}
+            <Card padding={false} className="mb-6">
+                <CardHeader className="bg-purple-600">
+                    <div className="flex items-center justify-between">
+                        <CardTitle className="text-white">Invoices</CardTitle>
+                        <Button 
+                            variant="secondary" 
+                            size="sm"
+                            onClick={handleOpenInvoiceModal}
+                        >
+                            Create Invoice
+                        </Button>
+                    </div>
+                </CardHeader>
+                <CardContent className="p-6">
+                    {lead.invoices && lead.invoices.length > 0 ? (
+                        <div className="overflow-x-auto">
+                            <table className="min-w-full divide-y divide-gray-200">
+                                <thead className="bg-gray-50">
+                                    <tr>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Invoice No.</th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order No.</th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Submission No.</th>
+                                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-gray-200">
+                                    {lead.invoices.map((invoice) => (
+                                        <tr key={invoice.id} className="hover:bg-gray-50">
+                                            <td className="px-4 py-3 text-sm text-gray-900">{invoice.invoice_no}</td>
+                                            <td className="px-4 py-3 text-sm text-gray-900">{formatDate(invoice.invoice_date)}</td>
+                                            <td className="px-4 py-3 text-sm text-gray-900">{invoice.order_no || 'N/A'}</td>
+                                            <td className="px-4 py-3 text-sm text-gray-900">{invoice.submission_no || 'N/A'}</td>
+                                            <td className="px-4 py-3 text-sm text-gray-900 text-right font-semibold">£{parseFloat(invoice.total || 0).toFixed(2)}</td>
+                                            <td className="px-4 py-3 text-sm text-center">
+                                                <a
+                                                    href={(() => {
+                                                        try {
+                                                            return route('invoices.download', invoice.id);
+                                                        } catch (e) {
+                                                            return `/invoices/${invoice.id}/download`;
+                                                        }
+                                                    })()}
+                                                    className="inline-flex items-center px-3 py-1.5 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded transition-colors duration-200"
+                                                    title="Download PDF"
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                >
+                                                    <ArrowDownTrayIcon className="h-4 w-4 mr-1" />
+                                                    Download
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    ) : (
+                        <p className="text-sm text-gray-500 italic">No invoices created yet.</p>
+                    )}
                 </CardContent>
             </Card>
 
@@ -1703,27 +1928,22 @@ export default function ShowLead({ lead, activityTypes, documentKinds, epc_certi
                                                             onChange={(e) => updateEprPayment(index, 'type', e.target.value)}
                                                         >
                                                             <option value="">Select Type</option>
-                                                            <option value="Early Fee">Early Fee</option>
-                                                            <option value="C3">C3</option>
+                                                            <option value="Data Match">Data Match</option>
+                                                            <option value="Land Registry">Land Registry</option>
+                                                            <option value="Boiler Material">Boiler Material</option>
                                                             <option value="Gas Engineer">Gas Engineer</option>
-                                                            <option value="Remedial">Remedial</option>
                                                             <option value="Loft Material">Loft Material</option>
                                                             <option value="Loft Labour">Loft Labour</option>
-                                                            <option value="Extractor Fan">Extractor Fan</option>
-                                                            <option value="Trickle Vents">Trickle Vents</option>
-                                                            <option value="Boiler Material">Boiler Material</option>
-                                                            <option value="ESI">ESI</option>
-                                                            <option value="Secondary Heating">Secondary Heating</option>
-                                                            <option value="Data Match">Data Match</option>
-                                                            <option value="Coordination">Coordination</option>
-                                                            <option value="GDGC">GDGC</option>
-                                                            <option value="Land Registry">Land Registry</option>
+                                                            <option value="Airbox">Airbox</option>
+                                                            <option value="DMEV">DMEV</option>
                                                             <option value="Administrative Charges">Administrative Charges</option>
-                                                            <option value="Surveyor">Surveyor</option>
-                                                            <option value="Misc">Misc</option>
-                                                            <option value="TRV/TTZC">TRV/TTZC</option>
+                                                            <option value="Coordination">Coordination</option>
+                                                            <option value="Commission">Commission</option>
+                                                            <option value="Remedial">Remedial</option>
                                                             <option value="VAT">VAT</option>
+                                                            <option value="GDGC">GDGC</option>
                                                             <option value="IBG">IBG</option>
+                                                            <option value="Surveyor">Surveyor</option>
                                                             <option value="Other">Other</option>
                                                         </FormSelect>
 
@@ -1747,7 +1967,7 @@ export default function ShowLead({ lead, activityTypes, documentKinds, epc_certi
                                                                     />
                                                                 </div>
                                                             </>
-                                                        ) : safePayment.type === 'TRV/TTZC' ? (
+                                                        ) : safePayment.type === 'Airbox' ? (
                                                             <>
                                                                 <FormInput
                                                                     label="Quantity"
@@ -1760,27 +1980,69 @@ export default function ShowLead({ lead, activityTypes, documentKinds, epc_certi
                                                                     label="Rate"
                                                                     type="number"
                                                                     step="0.01"
-                                                                    value={safePayment.rate}
-                                                                    onChange={(e) => updateEprPayment(index, 'rate', e.target.value)}
-                                                                    placeholder="0.00"
+                                                                    value={safePayment.rate || '12.50'}
+                                                                    disabled
+                                                                    className="bg-gray-100"
                                                                 />
                                                                 <FormInput
-                                                                    label="Total"
+                                                                    label="Amount"
                                                                     type="number"
                                                                     value={safePayment.amount}
                                                                     disabled
                                                                     className="bg-gray-100"
                                                                 />
                                                             </>
+                                                        ) : safePayment.type === 'DMEV' ? (
+                                                            <>
+                                                                <FormInput
+                                                                    label="Quantity"
+                                                                    type="number"
+                                                                    value={safePayment.quantity}
+                                                                    onChange={(e) => updateEprPayment(index, 'quantity', e.target.value)}
+                                                                    placeholder="0"
+                                                                />
+                                                                <div className="col-span-2">
+                                                                    <FormInput
+                                                                        label="Amount"
+                                                                        type="number"
+                                                                        step="0.01"
+                                                                        value={safePayment.amount}
+                                                                        onChange={(e) => updateEprPayment(index, 'amount', e.target.value)}
+                                                                        placeholder="0.00"
+                                                                    />
+                                                                </div>
+                                                            </>
+                                                        ) : safePayment.type === 'Remedial' ? (
+                                                            <>
+                                                                <div className="col-span-2">
+                                                                    <FormInput
+                                                                        label="Description"
+                                                                        type="text"
+                                                                        value={safePayment.other_details}
+                                                                        onChange={(e) => updateEprPayment(index, 'other_details', e.target.value)}
+                                                                        placeholder="Enter description"
+                                                                    />
+                                                                </div>
+                                                                <div className="col-span-1">
+                                                                    <FormInput
+                                                                        label="Amount"
+                                                                        type="number"
+                                                                        step="0.01"
+                                                                        value={safePayment.amount}
+                                                                        onChange={(e) => updateEprPayment(index, 'amount', e.target.value)}
+                                                                        placeholder="0.00"
+                                                                    />
+                                                                </div>
+                                                            </>
                                                         ) : safePayment.type === 'Other' ? (
                                                             <>
                                                                 <div className="col-span-2">
                                                                     <FormInput
-                                                                        label="Other Details"
+                                                                        label="Description"
                                                                         type="text"
                                                                         value={safePayment.other_details}
                                                                         onChange={(e) => updateEprPayment(index, 'other_details', e.target.value)}
-                                                                        placeholder="Enter expense details"
+                                                                        placeholder="Enter description"
                                                                     />
                                                                 </div>
                                                                 <div className="col-span-1">
@@ -1871,6 +2133,216 @@ export default function ShowLead({ lead, activityTypes, documentKinds, epc_certi
                         disabled={isSavingExpenses}
                     >
                         {isSavingExpenses ? 'Saving...' : 'Save Expenses'}
+                    </Button>
+                </ModalFooter>
+            </Modal>
+
+            {/* Invoice Modal */}
+            <Modal show={showInvoiceModal} onClose={handleCloseInvoiceModal} maxWidth="4xl">
+                <ModalHeader>Create Invoice</ModalHeader>
+                <ModalBody>
+                    <div className="space-y-6">
+                        {/* Buyer Information */}
+                        <div>
+                            <h3 className="text-lg font-semibold text-gray-900 mb-4">Bill To</h3>
+                            <div className="grid grid-cols-1 gap-4">
+                                <FormInput
+                                    label="Company Name"
+                                    type="text"
+                                    value={invoiceData.buyer_name}
+                                    onChange={(e) => updateInvoiceField('buyer_name', e.target.value)}
+                                    placeholder="e.g., Anesco Energy Limited"
+                                    required
+                                />
+                                <FormTextarea
+                                    label="Address"
+                                    value={invoiceData.buyer_address}
+                                    onChange={(e) => updateInvoiceField('buyer_address', e.target.value)}
+                                    placeholder="Unit 8-9 Easter Park, Benyon Road, Silchester, Reading, Berkshire, RG7 2PQ"
+                                    rows={3}
+                                    required
+                                />
+                            </div>
+                        </div>
+
+                        {/* Invoice Details */}
+                        <div>
+                            <h3 className="text-lg font-semibold text-gray-900 mb-4">Invoice Details</h3>
+                            <div className="grid grid-cols-2 gap-4">
+                                <FormInput
+                                    label="Invoice Date"
+                                    type="date"
+                                    value={invoiceData.invoice_date}
+                                    onChange={(e) => updateInvoiceField('invoice_date', e.target.value)}
+                                    required
+                                />
+                            <FormInput
+                                label="Invoice No."
+                                type="text"
+                                value={invoiceData.invoice_no}
+                                onChange={(e) => updateInvoiceField('invoice_no', e.target.value)}
+                                placeholder="e.g., 0020"
+                                required
+                            />
+                            <FormInput
+                                label="Order No."
+                                type="text"
+                                value={invoiceData.order_no}
+                                onChange={(e) => updateInvoiceField('order_no', e.target.value)}
+                                placeholder="e.g., 30005218"
+                            />
+                            <FormInput
+                                label="Submission No."
+                                type="text"
+                                value={invoiceData.submission_no}
+                                onChange={(e) => updateInvoiceField('submission_no', e.target.value)}
+                                placeholder="e.g., 7127"
+                            />
+                            <FormInput
+                                label="PO No."
+                                type="text"
+                                value={invoiceData.po_no}
+                                onChange={(e) => updateInvoiceField('po_no', e.target.value)}
+                                placeholder="e.g., 1"
+                            />
+                            <FormInput
+                                label="Due Date"
+                                type="date"
+                                value={invoiceData.due_date}
+                                onChange={(e) => updateInvoiceField('due_date', e.target.value)}
+                            />
+                            </div>
+                        </div>
+
+                        {/* Line Items */}
+                        <div>
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="text-lg font-semibold text-gray-900">Line Items</h3>
+                                <Button
+                                    type="button"
+                                    variant="secondary"
+                                    size="sm"
+                                    onClick={addInvoiceLineItem}
+                                >
+                                    Add Line Item
+                                </Button>
+                            </div>
+                            
+                            <div className="space-y-4">
+                                {invoiceData.line_items.map((item, index) => (
+                                    <div key={index} className="p-4 border border-gray-200 rounded-lg bg-gray-50">
+                                        <div className="grid grid-cols-12 gap-3">
+                                            <div className="col-span-5">
+                                                <FormInput
+                                                    label="Details"
+                                                    type="text"
+                                                    value={item.details}
+                                                    onChange={(e) => updateInvoiceLineItem(index, 'details', e.target.value)}
+                                                    placeholder="Item description"
+                                                    required
+                                                />
+                                            </div>
+                                            <div className="col-span-2">
+                                                <FormInput
+                                                    label="Qty"
+                                                    type="number"
+                                                    step="0.001"
+                                                    value={item.qty}
+                                                    onChange={(e) => updateInvoiceLineItem(index, 'qty', e.target.value)}
+                                                    placeholder="0"
+                                                    required
+                                                />
+                                            </div>
+                                            <div className="col-span-2">
+                                                <FormInput
+                                                    label="Price"
+                                                    type="number"
+                                                    step="0.01"
+                                                    value={item.price}
+                                                    onChange={(e) => updateInvoiceLineItem(index, 'price', e.target.value)}
+                                                    placeholder="0.00"
+                                                    required
+                                                />
+                                            </div>
+                                            <div className="col-span-2">
+                                                <FormInput
+                                                    label="Total"
+                                                    type="text"
+                                                    value={item.total || '0.00'}
+                                                    readOnly
+                                                    className="bg-gray-100"
+                                                />
+                                            </div>
+                                            <div className="col-span-1 flex items-end">
+                                                <Button
+                                                    type="button"
+                                                    variant="danger"
+                                                    size="sm"
+                                                    onClick={() => removeInvoiceLineItem(index)}
+                                                >
+                                                    ×
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Summary */}
+                            <div className="mt-6 pt-4 border-t border-gray-200">
+                                <div className="flex justify-end">
+                                    <div className="w-64 space-y-2">
+                                        <div className="flex justify-between text-sm">
+                                            <span className="text-gray-700">Subtotal:</span>
+                                            <span className="font-semibold">
+                                                £{invoiceData.line_items.reduce((sum, item) => {
+                                                    const qty = parseFloat(item.qty || 0);
+                                                    const price = parseFloat(item.price || 0);
+                                                    return sum + (qty * price);
+                                                }, 0).toFixed(2)}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between text-sm">
+                                            <span className="text-gray-700">VAT @ 20%:</span>
+                                            <span className="font-semibold">
+                                                £{(invoiceData.line_items.reduce((sum, item) => {
+                                                    const qty = parseFloat(item.qty || 0);
+                                                    const price = parseFloat(item.price || 0);
+                                                    return sum + (qty * price);
+                                                }, 0) * 0.20).toFixed(2)}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between text-lg font-bold pt-2 border-t border-gray-300">
+                                            <span>Invoice Total:</span>
+                                            <span>
+                                                £{(invoiceData.line_items.reduce((sum, item) => {
+                                                    const qty = parseFloat(item.qty || 0);
+                                                    const price = parseFloat(item.price || 0);
+                                                    return sum + (qty * price);
+                                                }, 0) * 1.20).toFixed(2)}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </ModalBody>
+                <ModalFooter>
+                    <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={handleCloseInvoiceModal}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        type="button"
+                        variant="primary"
+                        onClick={saveInvoice}
+                        disabled={isSavingInvoice}
+                    >
+                        {isSavingInvoice ? 'Saving...' : 'Create Invoice'}
                     </Button>
                 </ModalFooter>
             </Modal>
