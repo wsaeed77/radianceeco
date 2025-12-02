@@ -137,4 +137,5 @@ use App\Http\Controllers\InvoiceController;
 Route::middleware('auth')->group(function () {
     Route::post('/leads/{lead}/invoices', [InvoiceController::class, 'store'])->name('invoices.store');
     Route::get('/invoices/{invoice}/download', [InvoiceController::class, 'download'])->name('invoices.download');
+    Route::delete('/invoices/{invoice}', [InvoiceController::class, 'destroy'])->name('invoices.destroy');
 });

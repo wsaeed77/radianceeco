@@ -1470,22 +1470,56 @@ export default function ShowLead({ lead, activityTypes, documentKinds, epc_certi
                                             <td className="px-4 py-3 text-sm text-gray-900">{invoice.submission_no || 'N/A'}</td>
                                             <td className="px-4 py-3 text-sm text-gray-900 text-right font-semibold">£{parseFloat(invoice.total || 0).toFixed(2)}</td>
                                             <td className="px-4 py-3 text-sm text-center">
-                                                <a
-                                                    href={(() => {
-                                                        try {
-                                                            return route('invoices.download', invoice.id);
-                                                        } catch (e) {
-                                                            return `/invoices/${invoice.id}/download`;
-                                                        }
-                                                    })()}
-                                                    className="inline-flex items-center px-3 py-1.5 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded transition-colors duration-200"
-                                                    title="Download PDF"
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                >
-                                                    <ArrowDownTrayIcon className="h-4 w-4 mr-1" />
-                                                    Download
-                                                </a>
+                                                <div className="flex items-center justify-center gap-2">
+                                                    <a
+                                                        href={(() => {
+                                                            try {
+                                                                return route('invoices.download', invoice.id);
+                                                            } catch (e) {
+                                                                return `/invoices/${invoice.id}/download`;
+                                                            }
+                                                        })()}
+                                                        className="inline-flex items-center px-3 py-1.5 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded transition-colors duration-200"
+                                                        title="Download PDF"
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                    >
+                                                        <ArrowDownTrayIcon className="h-4 w-4 mr-1" />
+                                                        Download
+                                                    </a>
+                                                    <form
+                                                        onSubmit={(e) => {
+                                                            e.preventDefault();
+                                                            if (confirm('Are you sure you want to delete this invoice? This action cannot be undone.')) {
+                                                                router.delete(
+                                                                    (() => {
+                                                                        try {
+                                                                            return route('invoices.destroy', invoice.id);
+                                                                        } catch (e) {
+                                                                            return `/invoices/${invoice.id}`;
+                                                                        }
+                                                                    })(),
+                                                                    {
+                                                                        onSuccess: () => {
+                                                                            // Page will refresh automatically
+                                                                        },
+                                                                    }
+                                                                );
+                                                            }
+                                                        }}
+                                                        className="inline"
+                                                    >
+                                                        <Button
+                                                            type="submit"
+                                                            variant="danger"
+                                                            size="sm"
+                                                            className="inline-flex items-center px-3 py-1.5"
+                                                            title="Delete Invoice"
+                                                        >
+                                                            <TrashIcon className="h-4 w-4" />
+                                                        </Button>
+                                                    </form>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))}

@@ -92,4 +92,23 @@ class InvoiceController extends Controller
 
         return $pdf->download($filename);
     }
+
+    /**
+     * Delete an invoice.
+     */
+    public function destroy(Invoice $invoice)
+    {
+        Log::info('Invoice Deleted', [
+            'invoice_id' => $invoice->id,
+            'lead_id' => $invoice->lead_id,
+            'invoice_no' => $invoice->invoice_no,
+            'deleted_by' => Auth::id(),
+        ]);
+
+        $leadId = $invoice->lead_id;
+        $invoice->delete();
+
+        return redirect()->route('leads.show', $leadId)
+            ->with('success', 'Invoice deleted successfully!');
+    }
 }
